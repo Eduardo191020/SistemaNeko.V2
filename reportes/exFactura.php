@@ -1,21 +1,18 @@
 <?php
-// Activamos el almacenamiento en el buffer
 ob_start();
 if (strlen(session_id()) < 1) 
   session_start();
 
-if (!isset($_SESSION["nombre"]))
-{
+if (!isset($_SESSION["nombre"])) {
   echo 'Debe ingresar al sistema correctamente para visualizar el reporte';
-}
-else
-{
-  if ($_SESSION['ventas'] == 1)
-  {
-    // Incluimos el archivo Factura.php
-    require('Factura.php');
+} else {
+  if ($_SESSION['ventas'] == 1) {
 
-    // Establecemos los datos de la empresa
+    require('Factura.php');
+    require_once "../modelos/Venta.php";
+    require_once "Letras.php";
+
+    // ==== DATOS DE LA EMPRESA ====
     $logo = "logo.jpg";
     $ext_logo = "jpg";
     $empresa = "Ferretería neko";
@@ -24,92 +21,106 @@ else
     $telefono = "921263349";
     $email = "nekosaccix@gmail.com";
 
-    // Obtenemos los datos de la cabecera de la venta actual
-    require_once "../modelos/Venta.php";
+    // ==== DATOS DE LA VENTA ====
     $venta = new Venta();
     $rsptav = $venta->ventacabecera($_GET["id"]);
-    
-    // Recorremos todos los valores obtenidos
     $regv = $rsptav->fetch_object();
 
-    // Establecemos la configuración de la factura
+    // ==== CONFIGURACIÓN PDF ====
     $pdf = new PDF_Invoice('P', 'mm', 'A4');
+    $pdf->SetMargins(10, 10, 10);
+    $pdf->SetAutoPageBreak(true, 20);
     $pdf->AddPage();
 
-    // Enviamos los datos de la empresa al método addSociete de la clase Factura
-    $pdf->addSociete(utf8_decode($empresa),
-                    $documento."\n" .
-                    utf8_decode("Dirección: ").utf8_decode($direccion)."\n".
-                    utf8_decode("Teléfono: ").$telefono."\n" .
-                    "Email : ".$email,$logo,$ext_logo);
-    
-    $pdf->fact_dev("$regv->tipo_comprobante", "$regv->serie_comprobante-$regv->num_comprobante"); 
+    // ==== ENCABEZADO EMPRESA ====
+    $pdf->addSociete(
+      utf8_decode($empresa),
+      $documento . "\n" .
+      utf8_decode("Dirección: ") . utf8_decode($direccion) . "\n" .
+      utf8_decode("Teléfono: ") . $telefono . "\n" .
+      "Email: " . $email,
+      $logo,
+      $ext_logo
+    );
+
+    $pdf->fact_dev("$regv->tipo_comprobante", "$regv->serie_comprobante-$regv->num_comprobante");
     $pdf->addDate($regv->fecha);
 
-    // AGREGAR DATOS DEL CLIENTE MANUALMENTE SI NO EXISTE EL MÉTODO addClientAdresse()
+    // ==== DATOS DEL CLIENTE ====
     $pdf->SetFont('Arial', '', 10);
-    $pdf->SetXY(10, 90); // Establece la posición donde quieres que empiece la información del cliente
-    $pdf->Cell(0, 10, "Cliente: " . utf8_decode($regv->cliente), 0, 1);
-    $pdf->Cell(0, 10, "Domicilio: " . utf8_decode($regv->direccion), 0, 1);
-    $pdf->Cell(0, 10, "Documento: " . $regv->tipo_documento . ": " . $regv->num_documento, 0, 1);
-    $pdf->Cell(0, 10, "Email: " . $regv->email, 0, 1);
-    $pdf->Cell(0, 10, "Teléfono: " . $regv->telefono, 0, 1);
+    $pdf->Ln(60); // separación del encabezado
+    $pdf->Cell(0, 6, "Cliente: " . utf8_decode($regv->cliente), 0, 1);
+    $pdf->Cell(0, 6, "Domicilio: " . utf8_decode($regv->direccion), 0, 1);
+    $pdf->Cell(0, 6, "Documento: " . $regv->tipo_documento . ": " . $regv->num_documento, 0, 1);
+    if (!empty($regv->email)) $pdf->Cell(0, 6, "Email: " . $regv->email, 0, 1);
+    if (!empty($regv->telefono)) $pdf->Cell(0, 6, "Teléfono: " . $regv->telefono, 0, 1);
 
-    // Ahora vamos a agregar las columnas manualmente, en lugar de usar addCols()
-    $pdf->SetXY(10, 120); // Posición inicial
+    $pdf->Ln(5);
+
+    // ==== ENCABEZADO DE TABLA ====
     $pdf->SetFont('Arial', 'B', 10);
-    $pdf->Cell(23, 10, "CODIGO", 1, 0, 'C');
-    $pdf->Cell(78, 10, "DESCRIPCION", 1, 0, 'C');
-    $pdf->Cell(22, 10, "CANTIDAD", 1, 0, 'C');
-    $pdf->Cell(25, 10, "P.U.", 1, 0, 'C');
-    $pdf->Cell(20, 10, "DSCTO", 1, 0, 'C');
-    $pdf->Cell(22, 10, "SUBTOTAL", 1, 1, 'C');
+    $pdf->Cell(20, 8, "CODIGO", 1, 0, 'C');
+    $pdf->Cell(80, 8, "DESCRIPCION", 1, 0, 'C');
+    $pdf->Cell(20, 8, "CANT.", 1, 0, 'C');
+    $pdf->Cell(25, 8, "P.U.", 1, 0, 'C');
+    $pdf->Cell(20, 8, "DSCTO", 1, 0, 'C');
+    $pdf->Cell(25, 8, "SUBTOTAL", 1, 1, 'C');
 
-    // Establecemos los datos para las líneas de la venta
-    $pdf->SetFont('Arial', '', 10);
-    $y = 130; // Empezamos a agregar los detalles desde aquí
-
-    // Obtenemos todos los detalles de la venta actual
+    // ==== DETALLES ====
+    $pdf->SetFont('Arial', '', 9);
     $rsptad = $venta->ventadetalle($_GET["id"]);
-    
+
     while ($regd = $rsptad->fetch_object()) {
-      $pdf->SetXY(10, $y); // Ajustamos la posición de cada línea de detalle
-      $pdf->Cell(23, 10, $regd->codigo, 1, 0, 'C');
-      $pdf->Cell(78, 10, utf8_decode($regd->articulo), 1, 0, 'L');
-      $pdf->Cell(22, 10, $regd->cantidad, 1, 0, 'C');
-      $pdf->Cell(25, 10, $regd->precio_venta, 1, 0, 'R');
-      $pdf->Cell(20, 10, $regd->descuento, 1, 0, 'R');
-      $pdf->Cell(22, 10, $regd->subtotal, 1, 1, 'R');
-      
-      $y += 10; // Avanzamos la posición para la siguiente línea
+      $yInicio = $pdf->GetY();
+      $xInicio = 10;
+
+      // CODIGO
+      $pdf->SetXY($xInicio, $yInicio);
+      $pdf->Cell(20, 8, $regd->codigo, 1, 0, 'C');
+
+      // DESCRIPCION (MULTILÍNEA)
+      $pdf->SetXY($xInicio + 20, $yInicio);
+      $pdf->MultiCell(80, 8, utf8_decode($regd->articulo), 1, 'L');
+
+      // Reajustar altura por si hay varias líneas
+      $yFinal = $pdf->GetY();
+      $altura = $yFinal - $yInicio;
+
+      // Volvemos a la derecha de la descripción
+      $pdf->SetXY($xInicio + 100, $yInicio);
+      $pdf->Cell(20, $altura, $regd->cantidad, 1, 0, 'C');
+      $pdf->Cell(25, $altura, number_format($regd->precio_venta, 2), 1, 0, 'R');
+      $pdf->Cell(20, $altura, number_format($regd->descuento, 2), 1, 0, 'R');
+      $pdf->Cell(25, $altura, number_format($regd->subtotal, 2), 1, 1, 'R');
     }
 
-    // Convertimos el total en letras
-    require_once "Letras.php";
+    // ==== TOTAL EN LETRAS ====
+    $pdf->Ln(5);
     $V = new EnLetras(); 
     $con_letra = strtoupper($V->ValorEnLetras($regv->total_venta, "NUEVOS SOLES"));
-
-    // Mostramos el total en letras
-    $pdf->SetXY(10, $y); // Ajustamos la posición de la siguiente línea
     $pdf->SetFont('Arial', 'B', 10);
-    $pdf->Cell(0, 10, "Total en Letras: " . $con_letra, 0, 1);
+    $pdf->MultiCell(0, 8, "Total en Letras: " . $con_letra, 0, 'L');
 
-    // Mostramos el impuesto y el total en números
-    $pdf->SetXY(10, $y + 10); // Ajustamos la posición para los totales
-    $pdf->Cell(100, 10, "Subtotal:", 0, 0, 'L');
-    $pdf->Cell(30, 10, "S/ " . number_format($regv->total_venta - $regv->impuesto, 2), 0, 1, 'R');
-    
-    $pdf->Cell(100, 10, "IGV (" . $regv->impuesto . "%):", 0, 0, 'L');
-    $pdf->Cell(30, 10, "S/ " . number_format($regv->impuesto, 2), 0, 1, 'R');
-    
-    $pdf->Cell(100, 10, "TOTAL:", 0, 0, 'L');
-    $pdf->Cell(30, 10, "S/ " . number_format($regv->total_venta, 2), 0, 1, 'R');
-    
-    // Generamos el reporte
-    $pdf->Output('Reporte de Venta', 'I');
-  }
-  else
-  {
+    // ==== CÁLCULOS CORREGIDOS ====
+    $igv = ($regv->total_venta * $regv->impuesto) / 100;
+    $subtotal = $regv->total_venta - $igv;
+
+    $pdf->Ln(5);
+    $pdf->SetFont('Arial', '', 10);
+    $pdf->Cell(130, 8, "Subtotal:", 0, 0, 'R');
+    $pdf->Cell(40, 8, "S/ " . number_format($subtotal, 2), 0, 1, 'R');
+
+    $pdf->Cell(130, 8, "IGV (" . $regv->impuesto . "%):", 0, 0, 'R');
+    $pdf->Cell(40, 8, "S/ " . number_format($igv, 2), 0, 1, 'R');
+
+    $pdf->SetFont('Arial', 'B', 10);
+    $pdf->Cell(130, 8, "TOTAL:", 0, 0, 'R');
+    $pdf->Cell(40, 8, "S/ " . number_format($regv->total_venta, 2), 0, 1, 'R');
+
+    // ==== SALIDA PDF ====
+    $pdf->Output('Reporte_de_Venta.pdf', 'I');
+
+  } else {
     echo 'No tiene permiso para visualizar el reporte';
   }
 }

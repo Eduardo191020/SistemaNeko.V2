@@ -142,19 +142,20 @@ class PDF_Invoice extends FPDF
     }
 
     function addDate(string $date)
-    {
-        $r1 = $this->w - 61;
-        $r2 = $r1 + 49;
-        $y1 = 17;
-        $mid = $y1 + 2;
+{
+    $r1 = $this->w - 61;
+    $r2 = $r1 + 49;
+    $y1 = 17;
+    $height = 12;
 
-        $this->RoundedRect($r1, $y1, ($r2 - $r1), 12, 3.5, 'D');
-        $this->Line($r1, $mid + 3, $r2, $mid + 3);
-        $this->SetXY($r1 + ($r2 - $r1) / 2 - 5, $y1 + 3);
-        $this->SetFont("Arial", "B", 10);
-        $this->Cell(10, 5, "Fecha", 0, 0, "C");
-        $this->SetXY($r1 + ($r2 - $r1) / 2 - 5, $y1 + 9);
-        $this->SetFont("Arial", "", 10);
-        $this->Cell(10, 5, $date, 0, 0, "C");
-    }
+    $this->RoundedRect($r1, $y1, ($r2 - $r1), $height, 3.5, 'D');
+
+    $this->SetFont("Arial", "B", 10);
+    $this->SetXY($r1, $y1 + 1.5);
+    $this->Cell(($r2 - $r1), 5, "Fecha", 0, 0, "C");
+
+    $this->SetFont("Arial", "", 10);
+    $this->SetXY($r1, $y1 + 6.5);
+    $this->Cell(($r2 - $r1), 5, $date, 0, 0, "C");
+}
 }

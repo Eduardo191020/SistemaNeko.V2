@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: 127.0.0.1
--- Tiempo de generación: 29-10-2025 a las 00:36:38
+-- Tiempo de generación: 31-10-2025 a las 07:13:19
 -- Versión del servidor: 10.4.32-MariaDB
 -- Versión de PHP: 8.0.30
 
@@ -36,16 +36,17 @@ CREATE TABLE `articulo` (
   `precio_venta` decimal(10,2) NOT NULL,
   `descripcion` varchar(256) DEFAULT NULL,
   `imagen` varchar(50) DEFAULT NULL,
-  `condicion` tinyint(1) NOT NULL DEFAULT 1
+  `condicion` tinyint(1) NOT NULL DEFAULT 1,
+  `precio_compra` decimal(10,2) DEFAULT 0.00
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
 
 --
 -- Volcado de datos para la tabla `articulo`
 --
 
-INSERT INTO `articulo` (`idarticulo`, `idcategoria`, `codigo`, `nombre`, `stock`, `precio_venta`, `descripcion`, `imagen`, `condicion`) VALUES
-(5, 8, '21321355677', 'Tambores de freno', 55, 36.80, 'Tambores de Freno Descripción', '1760920283.jpg', 1),
-(6, 8, '09227222', 'Pastillas de frenos', 55, 36.80, 'Pastilla de frenos', '1760920293.jpg', 1);
+INSERT INTO `articulo` (`idarticulo`, `idcategoria`, `codigo`, `nombre`, `stock`, `precio_venta`, `descripcion`, `imagen`, `condicion`, `precio_compra`) VALUES
+(5, 8, '21321355677', 'Tambores de freno', 55, 36.80, 'Tambores de Freno Descripción', '1760920283.jpg', 1, 0.00),
+(6, 8, '09227222', 'Pastillas de frenos', 55, 36.80, 'Pastilla de frenos', '1760920293.jpg', 1, 0.00);
 
 -- --------------------------------------------------------
 
@@ -65,7 +66,7 @@ CREATE TABLE `categoria` (
 --
 
 INSERT INTO `categoria` (`idcategoria`, `nombre`, `descripcion`, `condicion`) VALUES
-(7, 'Cilindraje', 'Aceitado de la Marca Bosh', 0),
+(7, 'Cilindraje', 'Aceitado de la Marca Bosh', 1),
 (8, 'Sistema de Embrague', 'Reúne las piezas que permiten transmitir la potencia del motor a la caja de cambios.', 1);
 
 -- --------------------------------------------------------
@@ -242,6 +243,38 @@ INSERT INTO `persona` (`idpersona`, `tipo_persona`, `nombre`, `tipo_documento`, 
 -- --------------------------------------------------------
 
 --
+-- Estructura de tabla para la tabla `rol_permiso`
+--
+
+CREATE TABLE `rol_permiso` (
+  `id_rol_permiso` int(11) NOT NULL,
+  `id_rol` int(10) UNSIGNED NOT NULL,
+  `idpermiso` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Volcado de datos para la tabla `rol_permiso`
+--
+
+INSERT INTO `rol_permiso` (`id_rol_permiso`, `id_rol`, `idpermiso`) VALUES
+(1, 1, 1),
+(2, 1, 2),
+(3, 1, 3),
+(4, 1, 4),
+(5, 1, 5),
+(6, 1, 6),
+(7, 1, 7),
+(8, 2, 1),
+(9, 2, 4),
+(10, 2, 7),
+(11, 3, 1),
+(12, 3, 2),
+(13, 3, 3),
+(14, 3, 6);
+
+-- --------------------------------------------------------
+
+--
 -- Estructura de tabla para la tabla `rol_usuarios`
 --
 
@@ -324,10 +357,11 @@ CREATE TABLE `usuario` (
 
 INSERT INTO `usuario` (`idusuario`, `id_tipodoc`, `id_rol`, `nombre`, `tipo_documento`, `num_documento`, `direccion`, `telefono`, `email`, `cargo`, `clave`, `imagen`, `condicion`) VALUES
 (3, 1, 2, 'WALTER ELEONEL GIL TERRONES', 'DNI', '16617373', 'Eleodoro Coral 270', '966853147', 'serg.dangr@hotmail.com', 'Vendedor', 'd72a1fbc9c45afcc09c2978678d69a619f9bc68c5666d58a0b61529ab076e939', '', 1),
-(4, 2, 3, 'BOTICAS IP S.A.C.', 'RUC', '20608430301', 'Eleodoro Coral 270', '966853147', 'serg.el_crack@hotmail.com', 'Vendedor', 'd72a1fbc9c45afcc09c2978678d69a619f9bc68c5666d58a0b61529ab076e939', '', 1),
+(4, 2, 3, 'BOTICAS IP S.A.C.', 'RUC', '20608430301', 'Eleodoro Coral 270', '966853147', 'serg.el_crack@hotmail.com', 'Almacenero', 'd72a1fbc9c45afcc09c2978678d69a619f9bc68c5666d58a0b61529ab076e939', '', 1),
 (5, 1, 1, 'CRISTIAN MANFREDY DAVILA VALLE', 'DNI', '74134653', 'Barcelona 210 Urb San Juan', '932 375 500', 'cristiandavilavalle@gmail.com', 'Administrador', '4d89268f653c0c7b28414f760f12200f37c726e22c0b8577c75612568bfce99f', '1760918574.jpg', 1),
 (6, 1, 1, 'CARLOS JHEREMY SERPA CORTEZ', 'DNI', '74417406', 'San juan', '975475942', 'cjsc2002.2002@gmail.com', 'Administrador', '4d89268f653c0c7b28414f760f12200f37c726e22c0b8577c75612568bfce99f', '', 1),
-(12, 1, 1, 'JOSE EDUARDO ANGELES BRAVO', 'DNI', '72928002', '', '940367492', 'darkedu1019@gmail.com', 'Administrador', '1e5aea5231bf2cf071822f24852f8d049c2ee745e3b59ce505f6f2160f2ddd2d', '', 1);
+(12, 1, 1, 'JOSE EDUARDO ANGELES BRAVO', 'DNI', '72928002', '', '940367492', 'darkedu1019@gmail.com', 'Administrador', '$2y$10$.kpD6sF99rwZi6Ku4nV6ueqTrxGVN2wFKiR7S4veJuwz.560vKoxC', '', 1),
+(18, 1, 3, 'FABIAN ALEXIS PAICO CARRILLO', '', '76960068', '', '', 'eduardoab019@gmail.com', 'Almacenero', '$2y$10$00KkfrCpFAqhIxxNpeA1LOfYdsUCboBT.zqyl3YQqnEJPtjJlFB7.', 'almacenero.jpg', 1);
 
 -- --------------------------------------------------------
 
@@ -340,6 +374,44 @@ CREATE TABLE `usuario_permiso` (
   `idusuario` int(11) NOT NULL,
   `idpermiso` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
+
+--
+-- Volcado de datos para la tabla `usuario_permiso`
+--
+
+INSERT INTO `usuario_permiso` (`idusuario_permiso`, `idusuario`, `idpermiso`) VALUES
+(126, 5, 1),
+(127, 5, 2),
+(128, 5, 3),
+(129, 5, 4),
+(130, 5, 5),
+(131, 5, 6),
+(132, 5, 7),
+(133, 6, 1),
+(134, 6, 2),
+(135, 6, 3),
+(136, 6, 4),
+(137, 6, 5),
+(138, 6, 6),
+(139, 6, 7),
+(140, 12, 1),
+(141, 12, 2),
+(142, 12, 3),
+(143, 12, 4),
+(144, 12, 5),
+(145, 12, 6),
+(146, 12, 7),
+(157, 3, 1),
+(158, 3, 4),
+(159, 3, 7),
+(160, 4, 1),
+(161, 4, 2),
+(162, 4, 3),
+(163, 4, 6),
+(174, 18, 1),
+(175, 18, 2),
+(176, 18, 3),
+(177, 18, 6);
 
 -- --------------------------------------------------------
 
@@ -433,6 +505,15 @@ ALTER TABLE `persona`
   ADD UNIQUE KEY `uniq_proveedor_doc` (`tipo_persona`,`num_documento`);
 
 --
+-- Indices de la tabla `rol_permiso`
+--
+ALTER TABLE `rol_permiso`
+  ADD PRIMARY KEY (`id_rol_permiso`),
+  ADD UNIQUE KEY `uk_rol_permiso` (`id_rol`,`idpermiso`),
+  ADD KEY `fk_rol_permiso_rol` (`id_rol`),
+  ADD KEY `fk_rol_permiso_permiso` (`idpermiso`);
+
+--
 -- Indices de la tabla `rol_usuarios`
 --
 ALTER TABLE `rol_usuarios`
@@ -458,8 +539,9 @@ ALTER TABLE `user_otp`
 --
 ALTER TABLE `usuario`
   ADD PRIMARY KEY (`idusuario`),
-  ADD UNIQUE KEY `uq_usuario_email` (`email`),
-  ADD UNIQUE KEY `uq_usuario_doc` (`id_tipodoc`,`num_documento`),
+  ADD KEY `idx_email` (`email`),
+  ADD KEY `idx_tipodoc` (`id_tipodoc`),
+  ADD KEY `idx_documento` (`num_documento`),
   ADD KEY `fk_usuario_rol` (`id_rol`);
 
 --
@@ -531,6 +613,12 @@ ALTER TABLE `persona`
   MODIFY `idpersona` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
 
 --
+-- AUTO_INCREMENT de la tabla `rol_permiso`
+--
+ALTER TABLE `rol_permiso`
+  MODIFY `id_rol_permiso` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
+
+--
 -- AUTO_INCREMENT de la tabla `rol_usuarios`
 --
 ALTER TABLE `rol_usuarios`
@@ -540,19 +628,19 @@ ALTER TABLE `rol_usuarios`
 -- AUTO_INCREMENT de la tabla `user_otp`
 --
 ALTER TABLE `user_otp`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=31;
 
 --
 -- AUTO_INCREMENT de la tabla `usuario`
 --
 ALTER TABLE `usuario`
-  MODIFY `idusuario` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
+  MODIFY `idusuario` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
 
 --
 -- AUTO_INCREMENT de la tabla `usuario_permiso`
 --
 ALTER TABLE `usuario_permiso`
-  MODIFY `idusuario_permiso` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=123;
+  MODIFY `idusuario_permiso` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=178;
 
 --
 -- AUTO_INCREMENT de la tabla `venta`
@@ -598,6 +686,13 @@ ALTER TABLE `password_reset`
   ADD CONSTRAINT `fk_reset_usuario` FOREIGN KEY (`user_id`) REFERENCES `usuario` (`idusuario`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
+-- Filtros para la tabla `rol_permiso`
+--
+ALTER TABLE `rol_permiso`
+  ADD CONSTRAINT `fk_rol_permiso_permiso` FOREIGN KEY (`idpermiso`) REFERENCES `permiso` (`idpermiso`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_rol_permiso_rol` FOREIGN KEY (`id_rol`) REFERENCES `rol_usuarios` (`id_rol`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
 -- Filtros para la tabla `user_otp`
 --
 ALTER TABLE `user_otp`
@@ -607,15 +702,15 @@ ALTER TABLE `user_otp`
 -- Filtros para la tabla `usuario`
 --
 ALTER TABLE `usuario`
-  ADD CONSTRAINT `fk_usuario_rol` FOREIGN KEY (`id_rol`) REFERENCES `rol_usuarios` (`id_rol`),
-  ADD CONSTRAINT `fk_usuario_tipodoc` FOREIGN KEY (`id_tipodoc`) REFERENCES `tipo_documento` (`id_tipodoc`);
+  ADD CONSTRAINT `fk_usuario_rol` FOREIGN KEY (`id_rol`) REFERENCES `rol_usuarios` (`id_rol`) ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_usuario_tipodoc` FOREIGN KEY (`id_tipodoc`) REFERENCES `tipo_documento` (`id_tipodoc`) ON UPDATE CASCADE;
 
 --
 -- Filtros para la tabla `usuario_permiso`
 --
 ALTER TABLE `usuario_permiso`
   ADD CONSTRAINT `fk_usuario_permiso_permiso` FOREIGN KEY (`idpermiso`) REFERENCES `permiso` (`idpermiso`) ON DELETE NO ACTION ON UPDATE NO ACTION,
-  ADD CONSTRAINT `fk_usuario_permiso_usuario` FOREIGN KEY (`idusuario`) REFERENCES `usuario` (`idusuario`) ON DELETE NO ACTION ON UPDATE NO ACTION;
+  ADD CONSTRAINT `fk_usuario_permiso_usuario` FOREIGN KEY (`idusuario`) REFERENCES `usuario` (`idusuario`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
 -- Filtros para la tabla `venta`

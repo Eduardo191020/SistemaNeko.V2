@@ -215,17 +215,17 @@ if ($canVentas) {
 
                 <div class="form-group col-lg-2 col-md-2 col-sm-6 col-xs-12">
                   <label>Serie:</label>
-                  <input type="text" class="form-control" name="serie_comprobante" id="serie_comprobante" maxlength="7" placeholder="Serie">
+                  <input type="input" class="form-control" name="serie_comprobante" id="serie_comprobante" maxlength="7" placeholder="Serie" onkeypress='return event.charCode >= 48 && event.charCode <= 57'>
                 </div>
 
                 <div class="form-group col-lg-2 col-md-2 col-sm-6 col-xs-12">
                   <label>Número:</label>
-                  <input type="text" class="form-control" name="num_comprobante" id="num_comprobante" maxlength="10" placeholder="Número" required>
+                  <input type="input" class="form-control" name="num_comprobante" id="num_comprobante" maxlength="10" placeholder="Número" onkeypress='return event.charCode >= 48 && event.charCode <= 57' required>
                 </div>
 
                 <div class="form-group col-lg-2 col-md-2 col-sm-6 col-xs-12">
                   <label>Impuesto:</label>
-                  <input type="text" class="form-control" name="impuesto" id="impuesto" required>
+                  <input type="text" class="form-control" name="impuesto" id="impuesto" onkeypress='return event.charCode >= 48 && event.charCode <= 57' required>
                 </div>
               </div>
 

@@ -1,21 +1,23 @@
 /* vistas/scripts/ingreso.js
- * Listado INGRESOS + Filtro por fechas + OJITO (child-row con detalle)
+ * Ingresos con toolbar propia (botones + length + search + fechas)
  */
 
-var tabla;            // DataTable del listado principal
-var tablaArticulos;   // DataTable del modal de artículos
+var tabla;          // DataTable principal
+var tablaArticulos; // DataTable del modal
+var impuesto = 18;
+var cont = 0;
+var detalles = 0;
 
 // ===============================
-// Inicialización
+// Init
 // ===============================
 function init () {
   mostrarform(false);
-  listar();                 // listado principal
+  construirTabla();                 // crea DataTable una sola vez
 
-  // Guardar
   $("#formulario").on("submit", function (e) { guardaryeditar(e); });
 
-  // Cargar proveedores
+  // Proveedores
   $.post("../ajax/ingreso.php?op=selectProveedor", function (r) {
     $("#idproveedor").html(r);
     $('#idproveedor').selectpicker('refresh');
@@ -25,15 +27,14 @@ function init () {
   $('#mCompras').addClass("treeview active");
   $('#lIngresos').addClass("active");
 
-  // Impuesto según tipo de comprobante
+  // Impuesto por comprobante
   $("#tipo_comprobante").change(marcarImpuesto);
 
-  // Fecha hoy por defecto (si no llega desde PHP)
   autoprepararFecha();
 }
 
 // ===============================
-// Utilidades UI
+// UI helpers
 // ===============================
 function autoprepararFecha () {
   var f = document.getElementById('fecha_hora');
@@ -47,14 +48,91 @@ function autoprepararFecha () {
 }
 
 // ===============================
-// Limpieza y formularios
+// Listado (DataTable)
+// ===============================
+function construirTabla () {
+  // Si existía, destruye y limpia (evitamos doble init)
+  if ($.fn.DataTable.isDataTable('#tbllistado')) {
+    $('#tbllistado').DataTable().destroy();
+    $('#tbllistado tbody').empty();
+  }
+
+  tabla = $('#tbllistado').DataTable({
+    aProcessing: true,
+    aServerSide: true,
+    iDisplayLength: 5,
+    lengthMenu: [5, 10, 25, 50, 100],
+    order: [[1, 'desc']],    // fecha desc
+    dom: 'Brtip',            // sin l/f nativos
+    buttons: [
+      { extend: 'copyHtml5', text: 'Copy' },
+      { extend: 'excelHtml5', text: 'Excel' },
+      { extend: 'csvHtml5',  text: 'CSV' },
+      { extend: 'pdfHtml5',  text: 'PDF' }
+    ],
+    ajax: {
+      url: '../ajax/ingreso.php?op=listar',
+      type: 'GET',
+      dataType: 'json',
+      data: function (d) {
+        d.desde = $('#filtro_desde').val() || '';
+        d.hasta = $('#filtro_hasta').val() || '';
+      },
+      error: function (e) { console.log(e.responseText); }
+    },
+    language: {
+      lengthMenu: 'Mostrar : _MENU_ registros',
+      paginate: { previous: 'Anterior', next: 'Siguiente' },
+      info: 'Mostrando _START_ a _END_ de _TOTAL_ registros',
+      infoEmpty: 'Mostrando 0 a 0 de 0 registros',
+      zeroRecords: 'No se encontraron resultados',
+      infoFiltered: '(filtrado de _MAX_ registros)',
+      buttons: { copyTitle: 'Tabla Copiada', copySuccess: { _: '%d líneas copiadas', 1: '1 línea copiada' } }
+    },
+    drawCallback: function(){
+      // Si algún global inyecta length/filter otra vez, los ocultamos
+      $('#tbllistado_wrapper .dataTables_length, #tbllistado_wrapper .dataTables_filter').hide();
+    }
+  });
+
+  // Anclar botones a la toolbar propia (solo una vez)
+  var $holder = $('.dt-buttons-holder');
+  if ($holder.length && !$holder.find('.dt-buttons').length) {
+    $holder.append( tabla.buttons().container() );
+  }
+
+  // Controles propios
+  $('#customLength')
+    .val(tabla.page.len())
+    .off('change')
+    .on('change', function () {
+      tabla.page.len(parseInt(this.value, 10) || 5).draw();
+    });
+
+  $('#customSearch')
+    .off('keyup change input')
+    .on('keyup change input', function () {
+      tabla.search(this.value).draw();
+    });
+
+  // Fechas → reload sin reinit
+  $('#filtro_desde, #filtro_hasta').off('change input').on('change input', function(){
+    tabla.ajax.reload(null, false);
+  });
+  $('#btnFiltrar').off('click').on('click', function(){ tabla.ajax.reload(); });
+  $('#btnLimpiarFiltro').off('click').on('click', function(){
+    $('#filtro_desde').val(''); $('#filtro_hasta').val('');
+    tabla.ajax.reload();
+  });
+}
+
+// ===============================
+// Form helpers
 // ===============================
 function limpiar () {
   $("#idingreso").val("");
-  $("#idproveedor").val("");
-  $("#idproveedor").selectpicker('refresh');
-  $("#tipo_comprobante").val("Boleta");
-  $("#tipo_comprobante").selectpicker('refresh');
+  $("#idproveedor").val(""); $("#idproveedor").selectpicker('refresh');
+  $("#tipo_comprobante").val("Boleta"); $("#tipo_comprobante").selectpicker('refresh');
   $("#serie_comprobante").val("");
   $("#num_comprobante").val("");
   $("#impuesto").val("0");
@@ -73,7 +151,7 @@ function mostrarform (flag) {
     $("#formularioregistros").show();
     $("#btnagregar").hide();
 
-    listarArticulos(); // cargar modal artículos
+    listarArticulos();
     $("#btnGuardar").hide();
     $("#btnCancelar").show();
     $("#btnAgregarArt").show();
@@ -91,57 +169,28 @@ function cancelarform () {
 }
 
 // ===============================
-// Listados
+// Modal Artículos
 // ===============================
-function listar() {
-  tabla = $('#tbllistado').DataTable({
-    lengthMenu: [5, 10, 25, 75, 100],
+function listarArticulos () {
+  tablaArticulos = $('#tblarticulos').dataTable({
     aProcessing: true,
     aServerSide: true,
-    dom: '<"row"<"col-sm-6"B><"col-sm-6"f>>rtip',
-    buttons: ['copyHtml5','excelHtml5','csvHtml5','pdf'],
+    dom: 'Bfrtip',
+    buttons: [],
     ajax: {
-      url: '../ajax/ingreso.php?op=listar',
-      type: 'GET',
-      dataType: 'json',
-      data: function (d) {
-        d.desde = $('#filtro_desde').val() || '';
-        d.hasta = $('#filtro_hasta').val() || '';
-      },
+      url: '../ajax/ingreso.php?op=listarArticulos',
+      type: "get",
+      dataType: "json",
       error: function (e) { console.log(e.responseText); }
-    },
-    language: {
-      lengthMenu: 'Mostrar : _MENU_ registros',
-      buttons: { copyTitle: 'Tabla Copiada', copySuccess: { _: '%d líneas copiadas', 1: '1 línea copiada' } },
-      search: 'Buscar:'
     },
     bDestroy: true,
     iDisplayLength: 5,
-    order: [[1, 'desc']],
-    initComplete: function () {
-      // Mueve los filtros de fecha al lado del buscador
-      var $filter = $('#tbllistado_wrapper .dataTables_filter');
-      if ($('#dateFilters').length) { $('#dateFilters').appendTo($filter).show(); }
-
-      // Eventos de filtro
-      $('#filtro_desde, #filtro_hasta').off('change keyup').on('change keyup', function () {
-        tabla.ajax.reload(null, false);
-      });
-      $('#btnFiltrar').off('click').on('click', function () { tabla.ajax.reload(); });
-      $('#btnLimpiarFiltro').off('click').on('click', function () {
-        $('#filtro_desde').val(''); $('#filtro_hasta').val(''); tabla.ajax.reload();
-      });
-    }
-  });
-
-  // Ajuste de page length por si el usuario lo cambia
-  $('#tbllistado_length select').off('change').on('change', function () {
-    tabla.page.len(parseInt(this.value, 10)).draw();
-  });
+    order: [[1, "asc"]]
+  }).DataTable();
 }
 
 // ===============================
-// Guardado / edición
+// Guardar / Editar
 // ===============================
 function guardaryeditar (e) {
   e.preventDefault();
@@ -155,9 +204,9 @@ function guardaryeditar (e) {
     processData: false,
     success: function (datos) {
       bootbox.alert(datos);
-      if (/registrado/i.test(datos) || /Registrado/i.test(datos)) {
+      if (/registrado|actualizado/i.test(datos)) {
         mostrarform(false);
-        listar();
+        tabla.ajax.reload(null, false);
       }
     }
   });
@@ -169,35 +218,27 @@ function guardaryeditar (e) {
 // Mostrar / Anular
 // ===============================
 function mostrar (idingreso) {
-  // Abre el formulario de lectura
   mostrarform(true);
 
-  // 1) Cabecera
   $.ajax({
     url: "../ajax/ingreso.php?op=mostrar",
     type: "POST",
     data: { idingreso: idingreso },
     dataType: "json",
     success: function (data) {
-      try {
-        if (typeof data === 'string') data = JSON.parse(data);
-        if (data && data.error) { bootbox.alert("Error: " + data.error); return; }
+      if (typeof data === 'string') data = JSON.parse(data);
 
-        $("#idproveedor").val(data.idproveedor).selectpicker('refresh');
-        $("#tipo_comprobante").val(data.tipo_comprobante).selectpicker('refresh');
-        $("#serie_comprobante").val(data.serie_comprobante || '');
-        $("#num_comprobante").val(data.num_comprobante || '');
-        $("#fecha_hora").val(data.fecha || '');
-        $("#impuesto").val(data.impuesto || '0');
-        $("#idingreso").val(data.idingreso || idingreso);
+      $("#idproveedor").val(data.idproveedor).selectpicker('refresh');
+      $("#tipo_comprobante").val(data.tipo_comprobante).selectpicker('refresh');
+      $("#serie_comprobante").val(data.serie_comprobante || '');
+      $("#num_comprobante").val(data.num_comprobante || '');
+      $("#fecha_hora").val(data.fecha || '');
+      $("#impuesto").val(data.impuesto || '0');
+      $("#idingreso").val(data.idingreso || idingreso);
 
-        $("#btnGuardar").hide();
-        $("#btnCancelar").show();
-        $("#btnAgregarArt").hide();
-      } catch (err) {
-        console.error('Fallo parseando JSON de op=mostrar:', err, data);
-        bootbox.alert("No se pudo interpretar la respuesta del servidor (mostrar).");
-      }
+      $("#btnGuardar").hide();
+      $("#btnCancelar").show();
+      $("#btnAgregarArt").hide();
     },
     error: function (xhr) {
       const msg = xhr.responseText ? xhr.responseText.substr(0, 500) : 'Sin detalle';
@@ -206,7 +247,6 @@ function mostrar (idingreso) {
     }
   });
 
-  // 2) Detalle (HTML)
   $.ajax({
     url: "../ajax/ingreso.php?op=listarDetalle&id=" + encodeURIComponent(idingreso),
     type: "GET",
@@ -227,19 +267,15 @@ function anular (idingreso) {
     if (result) {
       $.post("../ajax/ingreso.php?op=anular", { idingreso: idingreso }, function (e) {
         bootbox.alert(e);
-        tabla.ajax.reload();
+        tabla.ajax.reload(null, false);
       });
     }
   });
 }
 
 // ===============================
-// Detalle de compra (formulario)
+// Detalle (form)
 // ===============================
-var impuesto = 18; // porcentaje
-var cont = 0;
-var detalles = 0;
-
 $("#btnGuardar").hide();
 
 function marcarImpuesto () {
@@ -248,7 +284,7 @@ function marcarImpuesto () {
   else { $("#impuesto").val("0"); }
 }
 
-// Recibe: id, nombre, precio_compra, precio_venta
+// id, nombre, precio_compra, precio_venta
 function agregarDetalle (idarticulo, articulo, pcompra, pventa) {
   var cantidad = 1;
 
@@ -300,10 +336,7 @@ function calcularTotales () {
 
 function evaluar () {
   if (detalles > 0) { $("#btnGuardar").show(); }
-  else {
-    $("#btnGuardar").hide();
-    cont = 0;
-  }
+  else { $("#btnGuardar").hide(); cont = 0; }
 }
 
 function eliminarDetalle (indice) {
@@ -313,10 +346,9 @@ function eliminarDetalle (indice) {
   evaluar();
 }
 
-// Exponer funciones a botones inline
+// Exponer para botones inline
 window.agregarDetalle = agregarDetalle;
 window.mostrar        = mostrar;
 window.anular         = anular;
 
-// Boot
 init();

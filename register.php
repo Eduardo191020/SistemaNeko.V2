@@ -312,7 +312,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 INSERT INTO usuario
                   (id_tipodoc, num_documento, id_rol, nombre, email, clave, telefono, direccion, cargo, imagen, condicion)
                 VALUES
-                  (?,          ?,             ?,      ?,      ?,     ?,     ?,        ?,         ?,     ?,      1)
+                  (?,          ?,             ?,      ?,      ?,     ?,     ?,        ?,         ?,     ?,      0)
               ');
               $ins->execute([
                 $id_tipodoc, $nro_documento, $id_rol, $nombreFinal, $email, $hash,

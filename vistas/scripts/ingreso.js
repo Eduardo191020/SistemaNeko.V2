@@ -351,4 +351,8 @@ window.agregarDetalle = agregarDetalle;
 window.mostrar        = mostrar;
 window.anular         = anular;
 
+<<<<<<< HEAD
 init();
+=======
+init();
+>>>>>>> dd655686cd855003dcbf8cfe62119537401a3e6d

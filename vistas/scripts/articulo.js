@@ -83,16 +83,19 @@ function actualizarSugerido(){
 
 /* =========================== Inicialización =========================== */
 function init() {
+  // Evita que DataTables muestre alert de error por defecto
+  if ($.fn.dataTable) $.fn.dataTable.ext.errMode = 'none';
+
   mostrarform(false);
-  listar();
+  construirTabla();
 
   // submit del formulario
   $("#formulario").on("submit", function (e) { guardaryeditar(e); });
 
   // cargar categorías
-  $.post("../ajax/articulo.php?op=selectCategoria", function (r) {
+  $.get("../ajax/articulo.php?op=selectCategoria", function (r) {
     $("#idcategoria").html(r);
-    $("#idcategoria").selectpicker('refresh');
+    try { $("#idcategoria").selectpicker('refresh'); } catch(_){}
   });
 
   // UI menor
@@ -114,7 +117,6 @@ function init() {
   });
 
   $("#precio_venta").on("blur", function(){
-    // normaliza a 2 decimales si es válido
     if (esPrecioValido(this.value)) this.value = f2(this.value);
   });
   $("#precio_compra").on("blur", function(){
@@ -152,7 +154,8 @@ function init() {
     bootbox.confirm("¿Está seguro de desactivar el artículo?", function (ok) {
       if (!ok) return;
       $.post("../ajax/articulo.php?op=desactivar", { idarticulo: id }, function (e) {
-        bootbox.alert(e);
+        try { var j = JSON.parse(e); bootbox.alert(j.message || e); }
+        catch { bootbox.alert(e); }
         tabla.ajax.reload(null, false);
       });
     });
@@ -164,7 +167,8 @@ function init() {
     bootbox.confirm("¿Está seguro de activar el artículo?", function (ok) {
       if (!ok) return;
       $.post("../ajax/articulo.php?op=activar", { idarticulo: id }, function (e) {
-        bootbox.alert(e);
+        try { var j = JSON.parse(e); bootbox.alert(j.message || e); }
+        catch { bootbox.alert(e); }
         tabla.ajax.reload(null, false);
       });
     });
@@ -195,15 +199,14 @@ function limpiar() {
 }
 
 function mostrarform(flag) {
-  limpiar();
   if (flag) {
     $("#listadoregistros").hide();
     $("#formularioregistros").show();
     $("#btnGuardar").prop("disabled", false);
     $("#btnagregar").hide();
   } else {
-    $("#listadoregistros").show();
     $("#formularioregistros").hide();
+    $("#listadoregistros").show();
     $("#btnagregar").show();
   }
 }
@@ -213,7 +216,8 @@ function cancelarform() {
   mostrarform(false);
 }
 
-function listar() {
+/* ======================= DataTable (listar) ======================= */
+function construirTabla() {
   if ($.fn.DataTable.isDataTable('#tbllistado')) {
     $('#tbllistado').DataTable().destroy();
     $('#tbllistado tbody').empty();
@@ -221,39 +225,55 @@ function listar() {
 
   tabla = $('#tbllistado').DataTable({
     processing: true,
-    serverSide: false,     // tolerante con backend clásico
+    serverSide: false,         // dataset completo desde PHP
     deferRender: true,
     responsive: true,
     autoWidth: false,
+    destroy: true,
     dom: 'Bfrtip',
     buttons: ['copyHtml5', 'excelHtml5', 'csvHtml5', 'pdf'],
-
     ajax: {
       url: '../ajax/articulo.php?op=listar',
       type: 'GET',
       dataType: 'json',
       dataSrc: function (json) {
-        // Acepta 'data' o 'aaData'
+        // Si backend retorna error JSON
+        if (json && json.success === false) {
+          bootbox.alert(json.message || 'Error al listar artículos.');
+          return [];
+        }
+        // Acepta 'data' (moderno) o 'aaData' (legacy)
         if (json && Array.isArray(json.data))   return json.data;
         if (json && Array.isArray(json.aaData)) return json.aaData;
+
+        // Si llega string, intenta parsearlo
+        try {
+          if (typeof json === 'string') {
+            var j = JSON.parse(json);
+            if (Array.isArray(j.data))   return j.data;
+            if (Array.isArray(j.aaData)) return j.aaData;
+          }
+        } catch (_){}
         return [];
+      },
+      error: function(xhr){
+        console.error('listar FAIL:', xhr.status, xhr.responseText);
+        bootbox.alert('No se pudo cargar el listado (revisa la consola).');
       }
     },
-
-    // Mapea las 9 columnas enviadas por el backend
+    // 9 columnas: [opciones, nombre, categoría, código, stock, pcompra, pventa, imagen, estado]
     columns: [
-      { data: 0, orderable:false, searchable:false }, // botones (HTML con .btn-edit / .btn-on / .btn-off)
-      { data: 1 }, // Nombre
-      { data: 2 }, // Categoría
-      { data: 3 }, // Código
-      { data: 4 }, // Stock
-      { data: 5 }, // Precio Compra
-      { data: 6 }, // Precio Venta
-      { data: 7, orderable:false, searchable:false }, // Imagen (HTML)
-      { data: 8, orderable:false, searchable:false }  // Estado (HTML)
+      { data: 0, orderable:false, searchable:false }, // botones
+      { data: 1 },
+      { data: 2 },
+      { data: 3 },
+      { data: 4, className:'text-right' },
+      { data: 5, className:'text-right' },
+      { data: 6, className:'text-right' },
+      { data: 7, orderable:false, searchable:false }, // img
+      { data: 8, orderable:false, searchable:false }  // estado
     ],
-
-    pageLength: 5,
+    pageLength: 10,
     order: [[1, "asc"]]
   });
 }
@@ -306,62 +326,70 @@ function guardaryeditar(e) {
     type: "POST",
     data: formData,
     contentType: false,
-    processData: false,
-    success: function (datos) {
-      const msg = String(datos || '').replace(/\uFEFF/g, '').trim();
-      if (/duplicado/i.test(msg)) {
-        bootbox.alert("⚠️ El nombre ya existe. No se permiten duplicados.");
-        mostrarform(false);
-        tabla.ajax.reload();
-        $("#btnGuardar").prop("disabled", false);
-        return;
-      }
-      bootbox.alert(msg);
-      mostrarform(false);
-      tabla.ajax.reload();
+    processData: false
+  })
+  .done(function (resp) {
+    const msg = String(resp || '').replace(/\uFEFF/g, '').trim();
+    if (/duplicado/i.test(msg)) {
+      bootbox.alert("⚠️ El nombre ya existe. No se permiten duplicados.");
+    } else {
+      // si backend nuevo devuelve JSON con message
+      try { var j = JSON.parse(msg); bootbox.alert(j.message || msg); }
+      catch { bootbox.alert(msg); }
     }
+    mostrarform(false);
+    limpiar();
+    if (tabla) tabla.ajax.reload(null,false);
+  })
+  .fail(function(xhr){
+    console.error('guardaryeditar FAIL:', xhr.status, xhr.responseText);
+    bootbox.alert('Error al guardar');
+  })
+  .always(function(){
+    $("#btnGuardar").prop("disabled", false);
   });
-
-  limpiar();
 }
 
 /* ============================= Mostrar =============================== */
 function mostrar(idarticulo) {
   $.post("../ajax/articulo.php?op=mostrar",
     { idarticulo: idarticulo },
-    function (data, status) {
-      data = (typeof data === 'string') ? JSON.parse(data) : data;
+    function (data) {
+      var d = (typeof data === 'string') ? JSON.parse(data) : data;
       mostrarform(true);
 
-      $("#idcategoria").val(data.idcategoria);
-      $('#idcategoria').selectpicker('refresh');
+      $("#idcategoria").val(d.idcategoria);
+      try { $('#idcategoria').selectpicker('refresh'); } catch(_){}
 
-      $("#codigo").val(data.codigo || "");
-      $("#nombre").val(data.nombre || "");
-      $("#stock").val(data.stock || "");
-      $("#precio_compra").val(data.precio_compra || "");
-      $("#precio_venta").val(data.precio_venta || "");
-      $("#descripcion").val(data.descripcion || "");
+      $("#codigo").val(d.codigo || "");
+      $("#nombre").val(d.nombre || "");
+      $("#stock").val(d.stock || "");
+      $("#precio_compra").val(d.precio_compra || "");
+      $("#precio_venta").val(d.precio_venta || "");
+      $("#descripcion").val(d.descripcion || "");
 
-      if (data.imagen) {
-        $("#imagenmuestra").attr("src", "../files/articulos/" + data.imagen).show();
+      if (d.imagen) {
+        $("#imagenmuestra").attr("src", "../files/articulos/" + d.imagen).show();
       } else {
         $("#imagenmuestra").attr("src", "").hide();
       }
-      $("#imagenactual").val(data.imagen || "");
-      $("#idarticulo").val(data.idarticulo);
+      $("#imagenactual").val(d.imagen || "");
+      $("#idarticulo").val(d.idarticulo);
 
       // Sugerido / barcode
       precioVentaEditadoManualmente = false;
       actualizarSugerido();
 
-      if (data.codigo && /^\d{8,13}$/.test(String(data.codigo))) {
-        renderBarcode(String(data.codigo));
+      if (d.codigo && /^\d{8,13}$/.test(String(d.codigo))) {
+        renderBarcode(String(d.codigo));
       } else {
         $("#print").hide();
       }
     }
-  );
+  ).fail(function(xhr){
+    console.error('mostrar FAIL:', xhr.status, xhr.responseText);
+    bootbox.alert('No se pudo cargar el artículo');
+  });
 }
 
 /* =================== Código de barras (Generar/Imprimir) =================== */

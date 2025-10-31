@@ -68,7 +68,7 @@ function flag($k){ return !empty($_SESSION[$k]) && (int)$_SESSION[$k] === 1; }
       box-shadow:0 2px 8px rgba(0,0,0,.15);
     }
     .skin-neko-blue .main-header .navbar .nav>li>a{ color:#eaf2ff; }
-    .skin-neko-blue .main-header .navbar .nav>li>a:hover{ background:rgba(255,255,255,.08); color:#fff; }
+    .skin-neko-blue .main-header .navbar .nav>li&a:hover{ background:rgba(255,255,255,.08); color:#fff; }
 
     .skin-neko-blue .main-sidebar{ background:#0b3a7a; }
     .skin-neko-blue .sidebar a{ color:#dbeafe; }
@@ -129,6 +129,7 @@ function flag($k){ return !empty($_SESSION[$k]) && (int)$_SESSION[$k] === 1; }
 <body class="hold-transition skin-neko-blue sidebar-mini">
 <div class="wrapper">
 
+<!-- ====== (1) Tu primer header: SIN CAMBIOS ====== -->
 <header class="main-header">
   <a href="escritorio.php" class="logo" title="Inicio">
     <span class="logo-mini"><i class="fa fa-wrench"></i></span>
@@ -181,6 +182,7 @@ function flag($k){ return !empty($_SESSION[$k]) && (int)$_SESSION[$k] === 1; }
   </nav>
 </header>
 
+<!-- ====== (2) Tu segundo header: SIN CAMBIOS ====== -->
 <header class="main-header">
   <a href="escritorio.php" class="logo" title="Inicio">
     <span class="logo-mini">
@@ -262,6 +264,9 @@ function flag($k){ return !empty($_SESSION[$k]) && (int)$_SESSION[$k] === 1; }
           <ul class="treeview-menu">
             <li id="lArticulos"><a href="articulo.php"><i class="fa fa-circle-o"></i> Artículos</a></li>
             <li id="lCategorias"><a href="categoria.php"><i class="fa fa-circle-o"></i> Categorías</a></li>
+
+            <!-- 🔹 NUEVO: acceso dentro de Almacén (no se borra nada) -->
+            <li id="lHistorial"><a href="historial_precios.php"><i class="fa fa-tags"></i> Historial Precios</a></li>
           </ul>
         </li>
       <?php endif; ?>
@@ -313,6 +318,7 @@ function flag($k){ return !empty($_SESSION[$k]) && (int)$_SESSION[$k] === 1; }
           </ul>
         </li>
       <?php endif; ?>
+
 
     </ul>
   </section>

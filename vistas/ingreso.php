@@ -290,6 +290,55 @@ if ($canCompras) {
         </div><!-- /neko-card -->
       </div><!-- /.col -->
     </div><!-- /.row -->
+
+<!-- =========================
+     Modal Actualizar Precio
+========================== -->
+<div class="modal fade" id="modalActualizarPrecio" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+
+      <div class="modal-header" style="background:#3c8dbc;color:#fff;">
+        <h4 class="modal-title">Actualizar precio de venta</h4>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
+          <span aria-hidden="true" style="color:#fff;">&times;</span>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <input type="hidden" id="ap_idarticulo">
+
+        <div class="form-group">
+          <label>Artículo</label>
+          <input type="text" id="ap_articulo" class="form-control" readonly>
+        </div>
+
+        <div class="form-group">
+          <label>Precio actual</label>
+          <input type="number" step="0.01" id="ap_precio_actual" class="form-control" readonly>
+        </div>
+
+        <div class="form-group">
+          <label>Precio nuevo</label>
+          <input type="number" step="0.01" id="ap_precio_nuevo" class="form-control" placeholder="0.00">
+        </div>
+
+        <div class="form-group">
+          <label>Motivo (opcional)</label>
+          <input type="text" id="ap_motivo" class="form-control" placeholder="Ej: Ajuste por lista proveedor">
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-default" data-dismiss="modal">Cancelar</button>
+        <button class="btn btn-primary" id="ap_btn_guardar"><i class="fa fa-save"></i> Actualizar precio</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
   </section><!-- /.content -->
 </div><!-- /.content-wrapper -->
 <!--Fin-Contenido-->

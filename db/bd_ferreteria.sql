@@ -340,7 +340,7 @@ CREATE TABLE `usuario` (
   `id_tipodoc` tinyint(3) UNSIGNED DEFAULT NULL,
   `id_rol` int(10) UNSIGNED DEFAULT NULL,
   `nombre` varchar(100) NOT NULL,
-  `tipo_documento` varchar(20) NOT NULL,
+  `tipo_documento` varchar(20) NULL,
   `num_documento` varchar(20) NOT NULL,
   `direccion` varchar(70) DEFAULT NULL,
   `telefono` varchar(20) DEFAULT NULL,

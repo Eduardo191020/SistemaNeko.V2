@@ -13,14 +13,23 @@ function init(){
 	$("#imagenmuestra").hide();
 	$("#pwd-strength").hide();
 	
+	// Asegurar hidden para modo de permisos (rol | personalizado | "")
+	if (!document.getElementById('modo_permisos')) {
+		$('<input>', {type:'hidden', id:'modo_permisos', name:'modo_permisos', value:''}).appendTo('#formulario');
+	}
+
 	//Mostramos los permisos
 	$.post("../ajax/usuario.php?op=permisos&id=",function(r){
-	        $("#permisos").html(r);
+	    $("#permisos").html(r);
+		// Si toca manualmente un permiso => modo personalizado
+		$("#permisos").off('change.modo').on('change.modo', "input[name='permiso[]']", function(){
+			$("#modo_permisos").val('personalizado');
+		});
 	});
 	
-	// ✅ NUEVO: Cargar roles dinámicamente
+	// ✅ Cargar roles dinámicamente (sin selección inicial)
 	cargarRoles();
-	
+
 	$('#mAcceso').addClass("treeview active");
     $('#lUsuarios').addClass("active");
     
@@ -33,15 +42,78 @@ function init(){
     }, 300);
 }
 
-// ✅ NUEVA FUNCIÓN: Cargar roles desde la base de datos
-function cargarRoles() {
+/* ============================================================
+   ✅ Cargar roles desde la base de datos con selección
+   - selectedId: (opcional) id_rol a seleccionar
+   - selectedLabel: (opcional) nombre del rol a seleccionar si no hay id
+   ============================================================ */
+function cargarRoles(selectedId, selectedLabel) {
 	$.post("../ajax/usuario.php?op=selectRol", function(r){
 		$("#cargo").html(r);
+
+		// Si recibimos un id_rol, intentamos seleccionarlo
+		if (selectedId) {
+			$("#cargo").val(String(selectedId));
+		} else if (selectedLabel) {
+			// Si no tenemos id, buscamos por el texto (nombre del rol)
+			var found = false;
+			$("#cargo option").each(function(){
+				if ($.trim($(this).text()) === $.trim(selectedLabel)) {
+					$("#cargo").val($(this).val());
+					found = true;
+					return false;
+				}
+			});
+			// Si no se encontró por nombre, lo dejamos como "Seleccione..."
+		}
 		$("#cargo").selectpicker('refresh');
 		console.log('✓ Roles cargados exitosamente');
+
+		/* ============================================================
+		   ✅ Al CAMBIAR rol manualmente:
+		      1) modo_permisos='rol'
+		      2) pedir permisos del rol y tildar checkboxes
+		   ============================================================ */
+		$("#cargo").off("change.autoPermisos").on("change.autoPermisos", function(){
+			var idRolSel = $(this).val();
+			if (idRolSel) {
+				$("#modo_permisos").val('rol');
+				cargarPermisosDeRol(idRolSel);
+			}
+		});
+
 	}).fail(function(xhr, status, error) {
 		console.error('❌ Error cargando roles:', error);
 		bootbox.alert('Error al cargar los roles. Recarga la página.');
+	});
+}
+
+/* ============================================================
+   ✅ Pedir permisos del rol y tildar checkboxes (name="permiso[]")
+   Endpoint: ../ajax/usuario.php?op=permisos_por_rol&id_rol=#
+   Respuesta esperada: [1,2,3,...] (IDs de permisos)
+   ============================================================ */
+function cargarPermisosDeRol(idRol){
+	// Si la lista de permisos aún no está pintada, reintenta
+	if ($("#permisos input[name='permiso[]']").length === 0) {
+		setTimeout(function(){ cargarPermisosDeRol(idRol); }, 150);
+		return;
+	}
+	$.getJSON("../ajax/usuario.php?op=permisos_por_rol&id_rol="+encodeURIComponent(idRol))
+	 .done(function(ids){
+		if (!Array.isArray(ids)) {
+			console.warn("⚠️ permisos_por_rol no devolvió un array. Respuesta:", ids);
+			return;
+		}
+		// Desmarcar todo y marcar solo los del rol
+		$("#permisos input[name='permiso[]']").prop("checked", false);
+		ids.forEach(function(pid){
+			$("#permisos input[name='permiso[]'][value='"+pid+"']").prop("checked", true);
+		});
+		console.log("✓ Permisos del rol aplicados:", ids);
+	 })
+	 .fail(function(xhr, status, error){
+		console.error("❌ No se pudieron cargar permisos del rol:", error);
 	});
 }
 
@@ -482,8 +554,15 @@ function limpiar()
 		document.getElementById('email').setCustomValidity('');
 	}
 	$("#nombre").attr('readonly', 'readonly');
+
+	// ✅ Contraseña requerida solo al crear (placeholder informativo)
+	$("#clave").prop("required", true);
+	$("#clave").attr("placeholder","Mínimo 10 caracteres");
+
+	// Reset de modo permisos (nuevo registro)
+	$("#modo_permisos").val('');
 	
-	// ✅ Recargar roles al limpiar
+	// ✅ Recargar roles al limpiar (sin selección)
 	cargarRoles();
 }
 
@@ -563,6 +642,29 @@ function guardaryeditar(e)
 	$("#btnGuardar").prop("disabled",true);
 	var formData = new FormData($("#formulario")[0]);
 
+	// ✅ Lógica clave: si la contraseña está vacía, mantén la actual
+	var _claveActual = ($("#clave").val() || "").trim();
+	if(!_claveActual){
+		formData.delete('clave');                // no enviar campo vacío
+		formData.append('mantener_clave','1');   // bandera para backend
+	}else{
+		formData.append('mantener_clave','0');   // hay nueva contraseña
+	}
+
+	/* ============================================================
+	   ✅ Guardar:
+	      - id_rol: el value del select (id)
+	      - cargo : el texto del select (nombre del rol) para mostrar en la lista
+	   ============================================================ */
+	var $sel = $("#cargo option:selected");
+	var rolId = $sel.val() || "";
+	var rolNombre = $.trim($sel.text() || "");
+
+	if (rolNombre) {
+		formData.set('cargo', rolNombre);  // guardar nombre visible
+	}
+	formData.set('id_rol', rolId);
+
 	$.ajax({
 		url: "../ajax/usuario.php?op=guardaryeditar",
 	    type: "POST",
@@ -603,9 +705,29 @@ function mostrar(idusuario)
 		$("#direccion").val(data.direccion);
 		$("#telefono").val(data.telefono);
 		$("#email").val(data.email);
-		$("#cargo").val(data.cargo);
+
+		/* ============================================================
+		   ✅ Selección del rol al cargar:
+		      - Si backend devuelve data.id_rol => seleccionamos por id
+		      - Si no, usamos data.cargo (nombre) para buscar por texto
+		   ============================================================ */
+		var idRolDelUsuario = (typeof data.id_rol !== "undefined" && data.id_rol !== null) ? String(data.id_rol) : "";
+		var nombreRolDelUsuario = data.cargo || "";
+
+		// Cargar roles y seleccionar el que corresponda
+		cargarRoles(idRolDelUsuario, nombreRolDelUsuario);
+
+		// Nota: NO llamamos cargarPermisosDeRol aquí para NO pisar
+		// los permisos propios del usuario en edición. Solo se
+		// aplicarán permisos del rol si el usuario cambia de rol.
 		$("#cargo").selectpicker('refresh');
-		$("#clave").val(data.clave);
+
+		// ❗ Seguridad: nunca mostrar hash/clave en el input
+		$("#clave").val("");                             // vacío al editar
+		$("#clave").prop("required", false);             // opcional en edición
+		$("#clave").attr("placeholder","Dejar en blanco para mantener la contraseña");
+		$("#toggleClave").text('👁️');                   // reset estado ojito
+		$("#clave").attr('type','password');
 		
 		$("#imagenmuestra").show();
 		$("#imagenmuestra").attr("src","../files/usuarios/"+data.imagen);
@@ -614,7 +736,11 @@ function mostrar(idusuario)
 
  	});
  	$.post("../ajax/usuario.php?op=permisos&id="+idusuario,function(r){
-	        $("#permisos").html(r);
+	    $("#permisos").html(r);
+		// Si toca manualmente un permiso en edición => personalizado
+		$("#permisos").off('change.modo').on('change.modo', "input[name='permiso[]']", function(){
+			$("#modo_permisos").val('personalizado');
+		});
 	});
 }
 

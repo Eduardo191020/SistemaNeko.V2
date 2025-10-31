@@ -304,19 +304,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $defaultImage = 'default.png';
             $imagen = $rolImages[$id_rol] ?? $defaultImage;
 
+            // === OBTENER NOMBRE DEL TIPO DE DOCUMENTO (para denormalizar en usuario.tipo_documento) ===
+            $tipo_documento_nombre = null;
+            try {
+              $qTipo = $pdo->prepare('SELECT nombre FROM tipo_documento WHERE id_tipodoc = ? LIMIT 1');
+              $qTipo->execute([$id_tipodoc]);
+              $rowTipo = $qTipo->fetch(PDO::FETCH_ASSOC);
+              if ($rowTipo && isset($rowTipo['nombre'])) {
+                $tipo_documento_nombre = $rowTipo['nombre'];
+              }
+            } catch (Exception $e) {
+              $tipo_documento_nombre = null; // no romper registro si falla
+            }
+
             try {
               $pdo->beginTransaction();
 
-              // ✅ INSERTAR CON IMAGEN
+              // ✅ INSERTAR CON IMAGEN Y NOMBRE DE TIPO DE DOCUMENTO
               $ins = $pdo->prepare('
                 INSERT INTO usuario
-                  (id_tipodoc, num_documento, id_rol, nombre, email, clave, telefono, direccion, cargo, imagen, condicion)
+                  (id_tipodoc, tipo_documento, num_documento, id_rol, nombre, email, clave, telefono, direccion, cargo, imagen, condicion)
                 VALUES
-                  (?,          ?,             ?,      ?,      ?,     ?,     ?,        ?,         ?,     ?,      1)
+                  (?,           ?,               ?,            ?,      ?,      ?,     ?,     ?,        ?,         ?,     ?,      1)
               ');
               $ins->execute([
-                $id_tipodoc, $nro_documento, $id_rol, $nombreFinal, $email, $hash,
-                $telefono, $direccion, $cargo, $imagen
+                $id_tipodoc,
+                $tipo_documento_nombre,   // NUEVO: nombre legible ("DNI","RUC","PASAPORTE")
+                $nro_documento,
+                $id_rol,
+                $nombreFinal,
+                $email,
+                $hash,
+                $telefono,
+                $direccion,
+                $cargo,
+                $imagen
               ]);
               
               $newUserId = $pdo->lastInsertId();

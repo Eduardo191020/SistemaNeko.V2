@@ -350,5 +350,79 @@ function eliminarDetalle (indice) {
 window.agregarDetalle = agregarDetalle;
 window.mostrar        = mostrar;
 window.anular         = anular;
+/* ===============================
+   HISTORIAL DE PRECIOS – UI
+   =============================== */
+
+// Abre el modal con los datos del artículo
+$(document).on('click', '.btn-abrir-actualizar-precio', function(){
+  var id    = $(this).data('idarticulo');
+  var name  = $(this).data('articulo') || '';
+  var p     = parseFloat($(this).data('precio') || 0).toFixed(2);
+
+  $('#ap_idarticulo').val(id);
+  $('#ap_articulo').val(name);
+
+  // Traer precio vigente real por seguridad
+  $.getJSON('../ajax/historial_precios.php?op=ultimo&idarticulo=' + encodeURIComponent(id), function(resp){
+    if(resp && resp.success){
+      $('#ap_precio_actual').val(parseFloat(resp.precio_venta || 0).toFixed(2));
+    }else{
+      $('#ap_precio_actual').val(p);
+    }
+    $('#ap_precio_nuevo').val('');
+    $('#ap_motivo').val('');
+    $('#modalActualizarPrecio').modal('show');
+  }).fail(function(){
+    $('#ap_precio_actual').val(p);
+    $('#ap_precio_nuevo').val('');
+    $('#ap_motivo').val('');
+    $('#modalActualizarPrecio').modal('show');
+  });
+});
+
+// Guardar actualización
+$('#ap_btn_guardar').on('click', function(){
+  var id    = $('#ap_idarticulo').val();
+  var pAct  = $('#ap_precio_actual').val();
+  var pNew  = $('#ap_precio_nuevo').val();
+  var mot   = $('#ap_motivo').val();
+
+  if(!id){ bootbox.alert('Artículo inválido'); return; }
+  if(!pNew || parseFloat(pNew) < 0){ bootbox.alert('Ingresa un precio nuevo válido'); return; }
+
+  var formData = new FormData();
+  formData.append('idarticulo', id);
+  formData.append('precio_actual', pAct);
+  formData.append('precio_nuevo', pNew);
+  formData.append('motivo', mot);
+
+  $.ajax({
+    url: '../ajax/historial_precios.php?op=actualizar_precio',
+    type: 'POST',
+    data: formData,
+    contentType: false,
+    processData: false,
+    success: function(resRaw){
+      var resp = {};
+      try { resp = JSON.parse(resRaw); } catch(e){}
+      if(resp && resp.success){
+        bootbox.alert(resp.message || 'Precio actualizado');
+        $('#modalActualizarPrecio').modal('hide');
+
+        // Si en tu detalle/tbl articulos tienes el precio visible, lo refrescas:
+        // 1) Si usas DataTable principal:
+        if(typeof tabla !== 'undefined' && tabla.ajax){ tabla.ajax.reload(null,false); }
+        // 2) O actualiza la celda/label de la fila según tu HTML (ejemplo):
+        // $(selectorDePrecioDeEsaFila).text(parseFloat(pNew).toFixed(2));
+      }else{
+        bootbox.alert( (resp && resp.message) ? resp.message : 'No se pudo actualizar.');
+      }
+    },
+    error: function(){
+      bootbox.alert('Error de red. Intenta nuevamente.');
+    }
+  });
+});
 
 init();

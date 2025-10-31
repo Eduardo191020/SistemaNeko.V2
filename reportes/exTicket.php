@@ -33,11 +33,11 @@ $reg = $rspta->fetch_object();
 //Establecemos los datos de la empresa
 $logo = "logo.jpg";
 $ext_logo = "jpg";
-$empresa = "Minisoft.";
-$documento = "74134653";
-$direccion = "Urb.San juan Chiclayo";
-$telefono = "932375500";
-$email = "cristiandavilavalle@gmail.com";
+$empresa = "Ferretería neko";
+$documento = "10406980788";
+$direccion = "Carretera a lambayeque";
+$telefono = "921263349";
+$email = "nekosaccix@gmail.com";
 
 
 ?>

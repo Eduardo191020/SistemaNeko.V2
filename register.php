@@ -325,7 +325,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 INSERT INTO usuario
                   (id_tipodoc, tipo_documento, num_documento, id_rol, nombre, email, clave, telefono, direccion, cargo, imagen, condicion)
                 VALUES
+<<<<<<< HEAD
                   (?,           ?,               ?,            ?,      ?,      ?,     ?,     ?,        ?,         ?,     ?,      1)
+=======
+                  (?,          ?,             ?,      ?,      ?,     ?,     ?,        ?,         ?,     ?,      0)
+>>>>>>> e50d10d8427cdc50bbaf2ecc1c0bfa0c5288cadc
               ');
               $ins->execute([
                 $id_tipodoc,

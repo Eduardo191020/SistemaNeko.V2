@@ -30,7 +30,6 @@ if ($canCompras) {
     --neko-primary:#1565c0;
     --neko-primary-dark:#0d47a1;
     --neko-bg:#f5f7fb;
-    --neko-border:#dbe3ef;
   }
   .content-wrapper{ background:var(--neko-bg); }
 
@@ -69,43 +68,6 @@ if ($canCompras) {
   .section-title .dot{ width:8px; height:8px; border-radius:999px; background:var(--neko-primary); display:inline-block; }
 
   .form-group{ margin-bottom:16px; }
-
-  /* ──────────────────────────────────────────────────────────────
-     GUTTER para los controles superiores de DataTables (más adentro)
-     ────────────────────────────────────────────────────────────── */
-  .neko-card__body .dataTables_wrapper{
-    padding: 6px 14px 0;            /* respiro arriba y a los lados */
-  }
-  /* Izquierda: botones + selector length */
-  .neko-card__body #tbllistado_wrapper .dt-buttons,
-  .neko-card__body #tbllistado_wrapper .dataTables_length{
-    margin-left: 4px;               /* leve margen interno */
-    margin-bottom: 8px;
-  }
-  /* Derecha: buscador (también contiene filtros de fecha) */
-  .neko-card__body #tbllistado_wrapper .dataTables_filter{
-    display:flex; align-items:center; gap:14px; flex-wrap:wrap;
-    justify-content:flex-end;
-    margin-right: 4px;              /* leve margen interno */
-    margin-bottom: 8px;
-  }
-  /* Botones DataTables (look suave) */
-  #tbllistado_wrapper .dt-buttons .btn{
-    border-radius:10px; padding:6px 12px;
-  }
-
-  /* Filtros de fecha embebidos en el buscador */
-  .dt-date-filters{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
-  .dt-date-item{ display:flex; align-items:center; gap:6px; margin:0; font-weight:500; color:#334155; }
-  .dt-rounded{ border-radius:12px !important; }
-  .dt-date-filters input[type="date"]{
-    width:155px; padding:6px 10px; border:1px solid var(--neko-border); background:#fff;
-    transition: box-shadow .15s ease, border-color .15s ease;
-  }
-  .dt-date-filters input[type="date"]:focus{
-    outline:0; border-color:#84aef8; box-shadow:0 0 0 3px rgba(59,130,246,.15);
-  }
-  .dt-date-filters .btn{ padding:6px 10px; font-weight:600; box-shadow:0 1px 2px rgba(0,0,0,.05); }
 </style>
 
 <!--Contenido-->
@@ -130,26 +92,67 @@ if ($canCompras) {
               </button>
             </div>
           </div>
+<!-- Filtro por fechas (se reubica a la derecha junto al buscador de DataTables) -->
+<div id="dateFilters" style="display:none">
+  <div class="dt-date-filters">
+    <label class="dt-date-item">
+      <span>Desde</span>
+      <input type="date" id="filtro_desde" class="form-control input-sm dt-rounded">
+    </label>
 
-          <!-- Filtro por fechas (se reubica al buscador de DataTables) -->
-          <div id="dateFilters" style="display:none">
-            <div class="dt-date-filters">
-              <label class="dt-date-item">
-                <span>Desde</span>
-                <input type="date" id="filtro_desde" class="form-control input-sm dt-rounded">
-              </label>
-              <label class="dt-date-item">
-                <span>Hasta</span>
-                <input type="date" id="filtro_hasta" class="form-control input-sm dt-rounded">
-              </label>
-              <button type="button" id="btnFiltrar" class="btn btn-primary btn-sm dt-rounded">
-                <i class="fa fa-filter"></i> Filtrar
-              </button>
-              <button type="button" id="btnLimpiarFiltro" class="btn btn-default btn-sm dt-rounded" title="Limpiar filtro">
-                <i class="fa fa-eraser"></i>
-              </button>
-            </div>
-          </div>
+    <label class="dt-date-item">
+      <span>Hasta</span>
+      <input type="date" id="filtro_hasta" class="form-control input-sm dt-rounded">
+    </label>
+
+    <button type="button" id="btnFiltrar" class="btn btn-primary btn-sm dt-rounded">
+      <i class="fa fa-filter"></i>
+      Filtrar
+    </button>
+
+    <button type="button" id="btnLimpiarFiltro" class="btn btn-default btn-sm dt-rounded" title="Limpiar filtro">
+      <i class="fa fa-eraser"></i>
+    </button>
+  </div>
+</div>
+<style>
+  /* Contenedor embebido dentro del .dataTables_filter (lado derecho) */
+  .dataTables_filter {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  .dataTables_filter label { margin: 0; } /* limpia margen default del label DT */
+
+  .dt-date-filters{
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  }
+  .dt-date-item{
+    display:flex; align-items:center; gap:6px; margin:0;
+    font-weight: 500; color:#334155; /* slate-700 */
+  }
+  .dt-rounded{
+    border-radius: 12px !important;
+  }
+  .dt-date-filters input[type="date"]{
+    width: 155px;
+    padding: 6px 10px;
+    border: 1px solid #dbe3ef;  /* azul grisáceo */
+    background: #fff;
+    transition: box-shadow .15s ease, border-color .15s ease;
+  }
+  .dt-date-filters input[type="date"]:focus{
+    outline:0;
+    border-color:#84aef8;                  /* azul suave */
+    box-shadow:0 0 0 3px rgba(59,130,246,.15);
+  }
+  .dt-date-filters .btn{
+    padding:6px 10px; font-weight:600;
+    box-shadow:0 1px 2px rgba(0,0,0,.05);
+  }
+</style>
 
           <!-- LISTADO -->
           <div class="neko-card__body panel-body table-responsive" id="listadoregistros">
@@ -307,7 +310,7 @@ if ($canCompras) {
             <th>Categoría</th>
             <th>Código</th>
             <th>Stock</th>
-            <th>Precio Compra</th>
+            <th>Precio Compra</th>  <!-- NUEVO -->
             <th>Precio Venta</th>
             <th>Imagen</th>
           </thead>
@@ -318,7 +321,7 @@ if ($canCompras) {
             <th>Categoría</th>
             <th>Código</th>
             <th>Stock</th>
-            <th>Precio Compra</th>
+            <th>Precio Compra</th>  <!-- NUEVO -->
             <th>Precio Venta</th>
             <th>Imagen</th>
           </tfoot>

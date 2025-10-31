@@ -81,12 +81,12 @@ function construirTabla () {
       error: function (e) { console.log(e.responseText); }
     },
     language: {
-      lengthMenu: 'Mostrar : _MENU_ registros',
+      lengthMenu: 'Mostrar : MENU registros',
       paginate: { previous: 'Anterior', next: 'Siguiente' },
-      info: 'Mostrando _START_ a _END_ de _TOTAL_ registros',
+      info: 'Mostrando START a END de TOTAL registros',
       infoEmpty: 'Mostrando 0 a 0 de 0 registros',
       zeroRecords: 'No se encontraron resultados',
-      infoFiltered: '(filtrado de _MAX_ registros)',
+      infoFiltered: '(filtrado de MAX registros)',
       buttons: { copyTitle: 'Tabla Copiada', copySuccess: { _: '%d líneas copiadas', 1: '1 línea copiada' } }
     },
     drawCallback: function(){
@@ -351,8 +351,4 @@ window.agregarDetalle = agregarDetalle;
 window.mostrar        = mostrar;
 window.anular         = anular;
 
-<<<<<<< HEAD
 init();
-=======
-init();
->>>>>>> dd655686cd855003dcbf8cfe62119537401a3e6d

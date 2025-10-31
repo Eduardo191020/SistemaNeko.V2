@@ -1,0 +1,41 @@
+/* ====== Topbar corporativa (igual a Proveedores) ====== */
+.neko-topbar {
+  background: #254ea8;          /* azul */
+  color: #fff;
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin-bottom: 14px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.neko-topbar h1 {
+  margin: 0; font-size: 18px; font-weight: 600; display: flex; align-items: center; gap: 10px;
+}
+
+/* Botones de la derecha */
+.neko-topbar .actions { display: flex; align-items: center; gap: 10px; }
+.btn-report {
+  background: #f0f5ff; color: #244fb0; border: 1px solid #cfe0ff;
+  border-radius: 10px; font-weight: 600; padding: 8px 12px;
+}
+.btn-report i { margin-right: 6px; }
+.btn-add {
+  background: #2fb96b; color: #fff; border: none; border-radius: 999px;
+  font-weight: 700; padding: 8px 14px;
+}
+.btn-add i { margin-right: 6px; }
+
+/* Card contenedor */
+.neko-card {
+  background:#fff; border:1px solid #e9edf5; border-radius: 12px;
+  box-shadow: 0 8px 18px rgba(16, 40, 120, .06);
+}
+.neko-card-body { padding: 16px; }
+
+/* DataTable coherente */
+.table.neko-table thead th {
+  background: #f3f6ff; color:#374151; font-weight:600; border-bottom:1px solid #e5e7eb;
+}
+.table.neko-table td, .table.neko-table th { vertical-align: middle; }
+.dataTables_wrapper .dt-buttons .btn { margin-right: 6px; }
+.dataTables_length { margin: 6px 0; }
+.dataTables_filter { margin: 6px 0; }  /* búsqueda a la derecha por defecto */

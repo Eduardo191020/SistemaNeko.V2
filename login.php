@@ -17,29 +17,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $error = 'Usuario o contraseña incorrectos';
   } else {
     // Buscar por email o por num_documento (no usamos "login" porque no existe esa columna)
-    $sql = '
-      SELECT 
-        idusuario          AS id_usuario,
-        nombre             AS nombre,
-        email,
-        clave,             -- puede ser bcrypt (password_hash) o legacy sha256 hex
-        imagen,             -- ✅ traer campo imagen
-        condicion          AS estado,     -- 1 = activo
-        id_tipodoc,
-        num_documento
-      FROM usuario
-      WHERE email = ?
-         OR num_documento = ?
-      LIMIT 1
-    ';
+
+$sql = '
+  SELECT 
+    u.idusuario       AS id_usuario,
+    u.nombre          AS nombre,
+    u.email,
+    u.clave,          
+    u.imagen,
+    u.condicion       AS estado_usuario,
+    u.id_tipodoc,
+    u.num_documento,
+    r.id_rol          AS id_rol,
+    r.nombre          AS nombre_rol,
+    r.estado          AS estado_rol
+  FROM usuario u
+  INNER JOIN rol_usuarios r ON u.id_rol = r.id_rol
+  WHERE u.email = ?
+     OR u.num_documento = ?
+  LIMIT 1
+';
+
+
     $stmt = $pdo->prepare($sql);
     $stmt->execute([$identity, $identity]);
     $user = $stmt->fetch();
 
     // Validaciones de estado y existencia
-    if (!$user || (int)$user['estado'] !== 1) {
-      $error = 'Usuario o contraseña incorrectos';
-    } else {
+if (!$user) {
+  $error = 'Usuario o contraseña incorrectos';
+} 
+elseif ((int)$user['estado_usuario'] == 0) {
+  $error = 'Usuario inactivo. Contacte al administrador.';
+}elseif ((int)$user['estado_usuario'] === 3) {
+    $error = 'Tu cuenta está pendiente de aprobación. Espera la activación por parte del administrador.';
+}elseif ((int)$user['estado_rol'] == 0) {
+  $error = 'Rol desactivado. Contacte al administrador del sistema.';
+}
+else {
+  // continúa con la verificación de contraseña y OTP...
+
       $hashDb = (string)$user['clave'];
       $userId = (int)$user['id_usuario'];
       $email  = (string)$user['email'];

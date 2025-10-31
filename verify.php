@@ -7,15 +7,11 @@ require_once __DIR__ . '/includes/mailer_smtp.php';
 
 if (session_status() !== PHP_SESSION_ACTIVE) { session_start(); }
 
-/* ----------------- Utilidades ----------------- */
-function redirect(string $url): never {
-  header('Location: ' . $url);
+$userId = $_SESSION['otp_uid'] ?? null;
+if (!$userId) {
+  header('Location: login.php');
   exit;
 }
-
-/* ----------------- Precondiciones ----------------- */
-$userId = $_SESSION['otp_uid'] ?? null;
-if (!$userId) { redirect('login.php'); }
 
 $MAX_ATTEMPTS = 5;
 $OTP_TTL_MIN  = 10;
@@ -36,14 +32,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'resen
     $otpHash = hash('sha256', $otp);
     $expires = (new DateTime("+{$OTP_TTL_MIN} minutes"))->format('Y-m-d H:i:s');
 
-    // Limpia OTPs previos del usuario
     $pdo->prepare('DELETE FROM user_otp WHERE user_id = ?')->execute([(int)$userId]);
-
-    // Inserta nuevo OTP
     $ins = $pdo->prepare('INSERT INTO user_otp (user_id, code_hash, expires_at, attempts) VALUES (?, ?, ?, 0)');
     $ins->execute([(int)$userId, $otpHash, $expires]);
 
-    // Envía correo
     $mailOk = sendAuthCode((string)$u['email'], $otp);
     if ($mailOk) {
       $_SESSION['otp_sent'] = time();
@@ -85,10 +77,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'verif
       } else {
         $inputHash = hash('sha256', $code);
         if (hash_equals(strtolower((string)$otpRow['code_hash']), strtolower($inputHash))) {
-          // OTP correcto: borra registro
           $pdo->prepare('DELETE FROM user_otp WHERE id = ?')->execute([(int)$otpRow['id']]);
 
-          // Carga datos del usuario
           $u = $pdo->prepare('SELECT idusuario, nombre, imagen, condicion, id_rol FROM usuario WHERE idusuario = ? LIMIT 1');
           $u->execute([(int)$userId]);
           $usr = $u->fetch();
@@ -101,72 +91,74 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'verif
             $_SESSION['idusuario']  = (int)$usr['idusuario'];
             $_SESSION['nombre']     = (string)$usr['nombre'];
             $_SESSION['imagen']     = (string)($usr['imagen'] ?: 'default.png');
-            $_SESSION['id_rol']     = isset($usr['id_rol']) ? (int)$usr['id_rol'] : 0;
 
-            // ======= CARGA ROBUSTA DE PERMISOS (por NOMBRE) =======
-            // Flags heredados (compatibilidad con tu UI)
+            // ======= CARGAR PERMISOS DESDE ROL =======
+            // Inicializar todos los permisos en 0
             $_SESSION['escritorio'] = 0;
             $_SESSION['almacen']    = 0;
             $_SESSION['compras']    = 0;
             $_SESSION['ventas']     = 0;
             $_SESSION['acceso']     = 0;
-            $_SESSION['consultac']  = 0; // Consulta Compras
-            $_SESSION['consultav']  = 0; // Consulta Ventas
+            $_SESSION['consultac']  = 0;
+            $_SESSION['consultav']  = 0;
 
             try {
-              // 1) Permisos por ROL (nombres)
+              // 1. Cargar permisos del ROL
               $qRolPerm = $pdo->prepare("
-                SELECT p.nombre
+                SELECT p.idpermiso, p.nombre
                 FROM rol_permiso rp
                 JOIN permiso p ON p.idpermiso = rp.idpermiso
                 WHERE rp.id_rol = ?
               ");
-              $qRolPerm->execute([ (int)($_SESSION['id_rol'] ?? 0) ]);
-              $permsRol = $qRolPerm->fetchAll(PDO::FETCH_COLUMN);
+              $qRolPerm->execute([(int)$usr['id_rol']]);
+              $permsRol = $qRolPerm->fetchAll(PDO::FETCH_ASSOC);
 
-              // 2) Permisos directos del USUARIO (nombres)
+              // 2. Cargar permisos DIRECTOS del usuario (sobrescriben al rol)
               $qUsrPerm = $pdo->prepare("
-                SELECT p.nombre
+                SELECT p.idpermiso, p.nombre
                 FROM usuario_permiso up
                 JOIN permiso p ON p.idpermiso = up.idpermiso
                 WHERE up.idusuario = ?
               ");
-              $qUsrPerm->execute([ (int)$_SESSION['idusuario'] ]);
-              $permsUsr = $qUsrPerm->fetchAll(PDO::FETCH_COLUMN);
+              $qUsrPerm->execute([(int)$usr['idusuario']]);
+              $permsUsr = $qUsrPerm->fetchAll(PDO::FETCH_ASSOC);
 
-              // 3) Combinar (case-insensitive)
-              $norm = function($s){ return mb_strtolower(trim((string)$s), 'UTF-8'); };
-              $effective = [];
-              foreach (array_merge($permsRol ?: [], $permsUsr ?: []) as $name) {
-                if ($name === null) continue;
-                $effective[$norm($name)] = $name; // mantiene forma original
+              // Combinar permisos (usuario tiene prioridad)
+              $permisos = array_merge($permsRol, $permsUsr);
+              
+              // Mapeo de permisos
+              $map = [
+                1 => 'escritorio',   // Escritorio
+                2 => 'almacen',      // Almacen
+                3 => 'compras',      // Compras
+                4 => 'ventas',       // Ventas
+                5 => 'acceso',       // Acceso (usuarios)
+                6 => 'consultac',    // Consulta Compras
+                7 => 'consultav',    // Consulta Ventas
+              ];
+
+              // Activar permisos en la sesión
+              foreach ($permisos as $p) {
+                $idpermiso = (int)$p['idpermiso'];
+                if (isset($map[$idpermiso])) {
+                  $_SESSION[$map[$idpermiso]] = 1;
+                }
               }
 
-              // 4) Mapa general de permisos: $_SESSION['perms']['NombrePermiso']=true (y versión minúscula)
-              $_SESSION['perms'] = [];
-              foreach ($effective as $normName => $origName) {
-                $_SESSION['perms'][$origName] = true;  // por nombre original
-                $_SESSION['perms'][$normName] = true;  // acceso tolerante a minúsculas
-              }
-
-              // 5) Actualiza flags heredados según tus nombres en tabla `permiso`
-              $has = function(string $perm) use ($effective, $norm): bool {
-                return isset($effective[$norm($perm)]);
-              };
-              $_SESSION['escritorio'] = $has('Escritorio') ? 1 : 0;
-              $_SESSION['almacen']    = $has('Almacen') ? 1 : 0;              // ojo a tildes: usa el mismo string que guardas
-              $_SESSION['compras']    = $has('Compras') ? 1 : 0;
-              $_SESSION['ventas']     = $has('Ventas') ? 1 : 0;
-              $_SESSION['acceso']     = $has('Acceso') ? 1 : 0;
-              $_SESSION['consultac']  = $has('Consulta Compras') ? 1 : 0;
-              $_SESSION['consultav']  = $has('Consulta Ventas') ? 1 : 0;
-
-              // (Opcional) Log de depuración
-              // error_log('Permisos efectivos: '.json_encode(array_keys($_SESSION['perms'])));
+              // Log para debugging (opcional, comentar en producción)
+              error_log("Usuario {$usr['idusuario']} - Permisos cargados: " . json_encode([
+                'escritorio' => $_SESSION['escritorio'],
+                'almacen' => $_SESSION['almacen'],
+                'compras' => $_SESSION['compras'],
+                'ventas' => $_SESSION['ventas'],
+                'acceso' => $_SESSION['acceso'],
+                'consultac' => $_SESSION['consultac'],
+                'consultav' => $_SESSION['consultav'],
+              ]));
+              
             } catch (Throwable $e) {
               error_log("Error cargando permisos: " . $e->getMessage());
-              // Acceso mínimo (solo escritorio) si algo falla
-              $_SESSION['perms'] = ['Escritorio'=>true, 'escritorio'=>true];
+              // En caso de error, dar acceso mínimo (solo escritorio)
               $_SESSION['escritorio'] = 1;
             }
 
@@ -174,10 +166,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'verif
             unset($_SESSION['otp_uid'], $_SESSION['otp_sent'], $_SESSION['otp_name'], $_SESSION['otp_email']);
 
             // Redirigir al escritorio
-            redirect('vistas/escritorio.php');
+            header('Location: vistas/escritorio.php');
+            exit;
           }
         } else {
-          // OTP incorrecto: acumula intento
           $pdo->prepare('UPDATE user_otp SET attempts = attempts + 1 WHERE id = ?')->execute([(int)$otpRow['id']]);
           $restantes = max(0, $MAX_ATTEMPTS - ((int)$otpRow['attempts'] + 1));
           $error = 'Código incorrecto. Intentos restantes: ' . $restantes . '.';
@@ -195,7 +187,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'verif
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="css/estilos.css?v=<?= time() ?>">
   <style>
-    .otp-input{letter-spacing:.35em;text-align:center;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;font-size:1.25rem}
+    .otp-input{
+      letter-spacing:.35em;text-align:center;
+      font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
+      font-size:1.25rem
+    }
     .btn-link{background:none;border:none;color:#6690ff;cursor:pointer;padding:0;font:inherit;text-decoration:underline}
     .auth-body{min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0b1020}
     .auth-card{display:grid;grid-template-columns:1fr 1fr;max-width:920px;width:100%;background:#0e1530;color:#dce3ff;border-radius:18px;overflow:hidden;box-shadow:0 10px 35px rgba(0,0,0,.35)}

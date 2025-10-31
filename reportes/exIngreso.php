@@ -19,10 +19,10 @@ require('Ingreso.php');
 $logo = "logo.jpg";
 $ext_logo = "jpg";
 $empresa = "Ferretería neko";
-$documento = "74134653";
-$direccion = "Urb.San juan Chiclayo";
-$telefono = "932375500";
-$email = "cristiandavilavalle@gmail.com";
+$documento = "10406980788";
+$direccion = "Carretera a lambayeque";
+$telefono = "921263349";
+$email = "nekosaccix@gmail.com";
 
 
 //Obtenemos los datos de la cabecera de la venta actual

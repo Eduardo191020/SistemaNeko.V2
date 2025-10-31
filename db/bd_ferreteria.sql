@@ -3,9 +3,9 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: 127.0.0.1
--- Tiempo de generación: 31-10-2025 a las 07:13:19
+-- Tiempo de generación: 01-11-2025 a las 00:04:44
 -- Versión del servidor: 10.4.32-MariaDB
--- Versión de PHP: 8.0.30
+-- Versión de PHP: 8.2.12
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -33,20 +33,22 @@ CREATE TABLE `articulo` (
   `codigo` varchar(50) DEFAULT NULL,
   `nombre` varchar(100) NOT NULL,
   `stock` int(11) NOT NULL,
+  `precio_compra` decimal(11,2) NOT NULL DEFAULT 0.00,
   `precio_venta` decimal(10,2) NOT NULL,
   `descripcion` varchar(256) DEFAULT NULL,
   `imagen` varchar(50) DEFAULT NULL,
-  `condicion` tinyint(1) NOT NULL DEFAULT 1,
-  `precio_compra` decimal(10,2) DEFAULT 0.00
+  `condicion` tinyint(1) NOT NULL DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
 
 --
 -- Volcado de datos para la tabla `articulo`
 --
 
-INSERT INTO `articulo` (`idarticulo`, `idcategoria`, `codigo`, `nombre`, `stock`, `precio_venta`, `descripcion`, `imagen`, `condicion`, `precio_compra`) VALUES
-(5, 8, '21321355677', 'Tambores de freno', 55, 36.80, 'Tambores de Freno Descripción', '1760920283.jpg', 1, 0.00),
-(6, 8, '09227222', 'Pastillas de frenos', 55, 36.80, 'Pastilla de frenos', '1760920293.jpg', 1, 0.00);
+INSERT INTO `articulo` (`idarticulo`, `idcategoria`, `codigo`, `nombre`, `stock`, `precio_compra`, `precio_venta`, `descripcion`, `imagen`, `condicion`) VALUES
+(5, 8, '21321355677', 'Tambores de freno', 63, 32.00, 49.09, 'Tambores de Freno Descripción', '1760920283.jpg', 1),
+(6, 8, '09227222', 'Pastillas de frenos', 61, 32343.00, 322.00, 'Pastilla de frenos', '1760920293.jpg', 1),
+(10, 8, '21321355672', 'Discos de embrague', 3, 42.00, 80.00, 'pieza fundamental del sistema de transmisión de un vehículo', '1761714848.jpg', 1),
+(11, 8, '274584727348', 'Zapatas de freno', 2, 52.00, 79.77, 'componentes de metal con forma curva que se usan en los frenos de tambor', '', 0);
 
 -- --------------------------------------------------------
 
@@ -90,7 +92,12 @@ CREATE TABLE `detalle_ingreso` (
 
 INSERT INTO `detalle_ingreso` (`iddetalle_ingreso`, `idingreso`, `idarticulo`, `cantidad`, `precio_compra`, `precio_venta`) VALUES
 (13, 10, 5, 50, 36.50, 36.80),
-(14, 10, 6, 50, 36.50, 36.80);
+(14, 10, 6, 50, 36.50, 36.80),
+(15, 11, 5, 5, 36.00, 36.80),
+(16, 11, 6, 5, 114.00, 115.00),
+(17, 12, 6, 4, 32343.00, 49614.16),
+(18, 12, 5, 3, 0.00, 36.80),
+(19, 12, 10, 1, 0.00, 100.00);
 
 --
 -- Disparadores `detalle_ingreso`
@@ -123,7 +130,12 @@ CREATE TABLE `detalle_venta` (
 --
 
 INSERT INTO `detalle_venta` (`iddetalle_venta`, `idventa`, `idarticulo`, `cantidad`, `precio_venta`, `descuento`) VALUES
-(21, 9, 5, 1, 0.00, 0.00);
+(22, 10, 11, 3, 112.90, 0.00),
+(23, 10, 10, 2, 100.00, 0.00),
+(24, 10, 10, 4, 100.00, 0.00),
+(25, 10, 6, 2, 115.00, 0.00),
+(26, 11, 10, 1, 100.00, 0.00),
+(27, 11, 6, 1, 115.00, 0.00);
 
 --
 -- Disparadores `detalle_venta`
@@ -135,6 +147,34 @@ CREATE TRIGGER `tr_updStockVenta` AFTER INSERT ON `detalle_venta` FOR EACH ROW B
 END
 $$
 DELIMITER ;
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `historial_precios`
+--
+
+CREATE TABLE `historial_precios` (
+  `id_historial` int(11) NOT NULL,
+  `idarticulo` int(11) NOT NULL,
+  `precio_anterior` decimal(11,2) NOT NULL,
+  `precio_nuevo` decimal(11,2) NOT NULL,
+  `motivo` varchar(200) DEFAULT NULL,
+  `fuente` enum('manual','ingreso') NOT NULL DEFAULT 'manual',
+  `id_origen` int(11) DEFAULT NULL,
+  `idusuario` int(11) DEFAULT NULL,
+  `fecha` datetime NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Volcado de datos para la tabla `historial_precios`
+--
+
+INSERT INTO `historial_precios` (`id_historial`, `idarticulo`, `precio_anterior`, `precio_nuevo`, `motivo`, `fuente`, `id_origen`, `idusuario`, `fecha`) VALUES
+(1, 10, 100.00, 21.00, 'xd', 'manual', NULL, 5, '2025-10-31 16:46:34'),
+(2, 5, 36.80, 32.00, 'me pica el webo', 'manual', NULL, 5, '2025-10-31 16:47:14'),
+(3, 10, 64.43, 80.00, 'guerra de afganistan', 'manual', NULL, 5, '2025-10-31 16:52:00'),
+(4, 6, 49614.16, 322.00, 'nose xd', 'manual', NULL, 5, '2025-10-31 17:29:00');
 
 -- --------------------------------------------------------
 
@@ -160,7 +200,9 @@ CREATE TABLE `ingreso` (
 --
 
 INSERT INTO `ingreso` (`idingreso`, `idproveedor`, `idusuario`, `tipo_comprobante`, `serie_comprobante`, `num_comprobante`, `fecha_hora`, `impuesto`, `total_compra`, `estado`) VALUES
-(10, 13, 5, 'Factura', '001', '0001', '2025-10-19 00:00:00', 18.00, 3650.00, 'Aceptado');
+(10, 13, 5, 'Factura', '001', '0001', '2025-10-19 00:00:00', 18.00, 3650.00, 'Aceptado'),
+(11, 13, 5, 'Boleta', '002', '0002', '2025-10-30 00:00:00', 0.00, 750.00, 'Aceptado'),
+(12, 13, 5, 'Boleta', '1', '1', '2025-10-31 00:00:00', 1.00, 129372.00, 'Aceptado');
 
 --
 -- Disparadores `ingreso`
@@ -237,8 +279,9 @@ CREATE TABLE `persona` (
 --
 
 INSERT INTO `persona` (`idpersona`, `tipo_persona`, `nombre`, `tipo_documento`, `num_documento`, `direccion`, `telefono`, `email`) VALUES
-(11, 'Cliente', 'Eduardo R', 'DNI', '17543473', 'Eleodoro Coral 270', '966853147', 'serg.dangr@hotmail.com'),
-(13, 'Proveedor', 'FERRETERIA EL PROVEEDOR S A', 'RUC', '20100712670', '', '932375900', 'provedorsa@gmail.com');
+(13, 'Proveedor', 'FERRETERIA EL PROVEEDOR S A', 'RUC', '20100712670', '', '932375900', 'provedorsa@gmail.com'),
+(14, 'Cliente', 'WALTER ELEONEL GIL TERRONES', 'DNI', '16617373', 'CALLE E.DEMETRIO CORAL 270 URB PRIMAVERA', '966853147', 'serg.dangr@hotmail.com'),
+(15, 'Cliente', 'ROBERTO MARTIN CELIS OSORES', 'DNI', '40029519', 'CAL LA MAR 178 URB SANTA VICTORIA', '966853142', 'U21227728@utp.edu.pe');
 
 -- --------------------------------------------------------
 
@@ -292,7 +335,8 @@ CREATE TABLE `rol_usuarios` (
 INSERT INTO `rol_usuarios` (`id_rol`, `nombre`, `estado`, `creado_en`) VALUES
 (1, 'Admin', 1, '2025-10-16 16:26:58'),
 (2, 'Vendedor', 1, '2025-10-16 16:26:58'),
-(3, 'Almacenero', 1, '2025-10-16 16:26:58');
+(3, 'Almacenero', 1, '2025-10-16 16:26:58'),
+(9, 'Supervisor', 1, '2025-10-29 03:40:12');
 
 -- --------------------------------------------------------
 
@@ -340,7 +384,7 @@ CREATE TABLE `usuario` (
   `id_tipodoc` tinyint(3) UNSIGNED DEFAULT NULL,
   `id_rol` int(10) UNSIGNED DEFAULT NULL,
   `nombre` varchar(100) NOT NULL,
-  `tipo_documento` varchar(20) NULL,
+  `tipo_documento` varchar(20) NOT NULL,
   `num_documento` varchar(20) NOT NULL,
   `direccion` varchar(70) DEFAULT NULL,
   `telefono` varchar(20) DEFAULT NULL,
@@ -356,12 +400,59 @@ CREATE TABLE `usuario` (
 --
 
 INSERT INTO `usuario` (`idusuario`, `id_tipodoc`, `id_rol`, `nombre`, `tipo_documento`, `num_documento`, `direccion`, `telefono`, `email`, `cargo`, `clave`, `imagen`, `condicion`) VALUES
-(3, 1, 2, 'WALTER ELEONEL GIL TERRONES', 'DNI', '16617373', 'Eleodoro Coral 270', '966853147', 'serg.dangr@hotmail.com', 'Vendedor', 'd72a1fbc9c45afcc09c2978678d69a619f9bc68c5666d58a0b61529ab076e939', '', 1),
-(4, 2, 3, 'BOTICAS IP S.A.C.', 'RUC', '20608430301', 'Eleodoro Coral 270', '966853147', 'serg.el_crack@hotmail.com', 'Almacenero', 'd72a1fbc9c45afcc09c2978678d69a619f9bc68c5666d58a0b61529ab076e939', '', 1),
-(5, 1, 1, 'CRISTIAN MANFREDY DAVILA VALLE', 'DNI', '74134653', 'Barcelona 210 Urb San Juan', '932 375 500', 'cristiandavilavalle@gmail.com', 'Administrador', '4d89268f653c0c7b28414f760f12200f37c726e22c0b8577c75612568bfce99f', '1760918574.jpg', 1),
-(6, 1, 1, 'CARLOS JHEREMY SERPA CORTEZ', 'DNI', '74417406', 'San juan', '975475942', 'cjsc2002.2002@gmail.com', 'Administrador', '4d89268f653c0c7b28414f760f12200f37c726e22c0b8577c75612568bfce99f', '', 1),
-(12, 1, 1, 'JOSE EDUARDO ANGELES BRAVO', 'DNI', '72928002', '', '940367492', 'darkedu1019@gmail.com', 'Administrador', '$2y$10$.kpD6sF99rwZi6Ku4nV6ueqTrxGVN2wFKiR7S4veJuwz.560vKoxC', '', 1),
-(18, 1, 3, 'FABIAN ALEXIS PAICO CARRILLO', '', '76960068', '', '', 'eduardoab019@gmail.com', 'Almacenero', '$2y$10$00KkfrCpFAqhIxxNpeA1LOfYdsUCboBT.zqyl3YQqnEJPtjJlFB7.', 'almacenero.jpg', 1);
+(5, 1, 1, 'CRISTIAN MANFREDY DAVILA VALLE', 'DNI', '74134653', 'Barcelona 210 Urb San Juan', '932 375 500', 'serg.dangr@hotmail.com', 'Administrador', '$2y$10$O.QWOxddBlh9z/SIpAhQfOKm0PkrxBwHDbVUy5YGKS.UWvZgZ3OaK', '1760918574.jpg', 1),
+(16, 1, 2, 'BRISALINA VASQUEZ DE LA CRUZ', 'DNI', '75474940', '', '940367492', 'darkedu201@gmail.com', 'Vendedor', '$2y$10$RDnKiPAHzC9xCqDmNG0Cte9ZaiRlBmjG/S3bdwRQ9jrPkQkS6QHRi', '', 0),
+(19, 1, 2, 'ROBERTO MARTIN CELIS OSORES', 'DNI', '40029519', 'Eleodoro Coral 270', '966853147', 'serg.el_crack@hotmail.com', 'Vendedor', '$2y$10$dzAVEvtxNTbZoSSjQrEYG.S2aC/X8dPfbx.EKUVXlV7CWtS6897wy', 'vendedor.png', 1);
+
+--
+-- Disparadores `usuario`
+--
+DELIMITER $$
+CREATE TRIGGER `tr_usuario_tipodoc_bi` BEFORE INSERT ON `usuario` FOR EACH ROW BEGIN
+    DECLARE vtd VARCHAR(20);
+
+    IF NEW.id_tipodoc IS NOT NULL THEN
+        SELECT nombre INTO vtd
+        FROM tipo_documento
+        WHERE id_tipodoc = NEW.id_tipodoc
+        LIMIT 1;
+
+        IF vtd IS NOT NULL THEN
+            SET NEW.tipo_documento = vtd;
+        END IF;
+    END IF;
+
+    IF NEW.tipo_documento IS NULL THEN
+        SET NEW.tipo_documento = '';
+    END IF;
+END
+$$
+DELIMITER ;
+DELIMITER $$
+CREATE TRIGGER `tr_usuario_tipodoc_bu` BEFORE UPDATE ON `usuario` FOR EACH ROW BEGIN
+    DECLARE vtd2 VARCHAR(20);
+
+    IF (NEW.id_tipodoc <> OLD.id_tipodoc)
+       OR (NEW.tipo_documento IS NULL OR TRIM(NEW.tipo_documento) = '') THEN
+
+        IF NEW.id_tipodoc IS NOT NULL THEN
+            SELECT nombre INTO vtd2
+            FROM tipo_documento
+            WHERE id_tipodoc = NEW.id_tipodoc
+            LIMIT 1;
+
+            IF vtd2 IS NOT NULL THEN
+                SET NEW.tipo_documento = vtd2;
+            END IF;
+        END IF;
+    END IF;
+
+    IF NEW.tipo_documento IS NULL THEN
+        SET NEW.tipo_documento = '';
+    END IF;
+END
+$$
+DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -387,31 +478,12 @@ INSERT INTO `usuario_permiso` (`idusuario_permiso`, `idusuario`, `idpermiso`) VA
 (130, 5, 5),
 (131, 5, 6),
 (132, 5, 7),
-(133, 6, 1),
-(134, 6, 2),
-(135, 6, 3),
-(136, 6, 4),
-(137, 6, 5),
-(138, 6, 6),
-(139, 6, 7),
-(140, 12, 1),
-(141, 12, 2),
-(142, 12, 3),
-(143, 12, 4),
-(144, 12, 5),
-(145, 12, 6),
-(146, 12, 7),
-(157, 3, 1),
-(158, 3, 4),
-(159, 3, 7),
-(160, 4, 1),
-(161, 4, 2),
-(162, 4, 3),
-(163, 4, 6),
-(174, 18, 1),
-(175, 18, 2),
-(176, 18, 3),
-(177, 18, 6);
+(170, 16, 1),
+(171, 16, 4),
+(172, 16, 7),
+(250, 19, 1),
+(251, 19, 4),
+(252, 19, 7);
 
 -- --------------------------------------------------------
 
@@ -437,7 +509,31 @@ CREATE TABLE `venta` (
 --
 
 INSERT INTO `venta` (`idventa`, `idcliente`, `idusuario`, `tipo_comprobante`, `serie_comprobante`, `num_comprobante`, `fecha_hora`, `impuesto`, `total_venta`, `estado`) VALUES
-(9, 11, 3, 'Boleta', '21', '21', '2001-02-21 00:00:00', 21.00, 0.00, 'Aceptado');
+(10, 14, 16, 'Boleta', '1', '1', '2025-10-30 00:00:00', 0.00, 427.90, 'Aceptado'),
+(11, 15, 5, 'Boleta', '11', '11', '2025-10-31 00:00:00', 0.00, 215.00, 'Aceptado');
+
+-- --------------------------------------------------------
+
+--
+-- Estructura Stand-in para la vista `v_precios_actuales`
+-- (Véase abajo para la vista actual)
+--
+CREATE TABLE `v_precios_actuales` (
+`idarticulo` int(11)
+,`nombre` varchar(100)
+,`precio_venta` decimal(10,2)
+,`precio_compra` decimal(11,2)
+,`stock` int(11)
+);
+
+-- --------------------------------------------------------
+
+--
+-- Estructura para la vista `v_precios_actuales`
+--
+DROP TABLE IF EXISTS `v_precios_actuales`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `v_precios_actuales`  AS SELECT `a`.`idarticulo` AS `idarticulo`, `a`.`nombre` AS `nombre`, `a`.`precio_venta` AS `precio_venta`, `a`.`precio_compra` AS `precio_compra`, `a`.`stock` AS `stock` FROM `articulo` AS `a` ;
 
 --
 -- Índices para tablas volcadas
@@ -473,6 +569,14 @@ ALTER TABLE `detalle_venta`
   ADD PRIMARY KEY (`iddetalle_venta`),
   ADD KEY `fk_detalle_venta_venta_idx` (`idventa`),
   ADD KEY `fk_detalle_venta_articulo_idx` (`idarticulo`);
+
+--
+-- Indices de la tabla `historial_precios`
+--
+ALTER TABLE `historial_precios`
+  ADD PRIMARY KEY (`id_historial`),
+  ADD KEY `idx_hp_articulo` (`idarticulo`),
+  ADD KEY `idx_hp_usuario` (`idusuario`);
 
 --
 -- Indices de la tabla `ingreso`
@@ -568,37 +672,43 @@ ALTER TABLE `venta`
 -- AUTO_INCREMENT de la tabla `articulo`
 --
 ALTER TABLE `articulo`
-  MODIFY `idarticulo` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `idarticulo` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- AUTO_INCREMENT de la tabla `categoria`
 --
 ALTER TABLE `categoria`
-  MODIFY `idcategoria` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `idcategoria` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT de la tabla `detalle_ingreso`
 --
 ALTER TABLE `detalle_ingreso`
-  MODIFY `iddetalle_ingreso` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
+  MODIFY `iddetalle_ingreso` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
 
 --
 -- AUTO_INCREMENT de la tabla `detalle_venta`
 --
 ALTER TABLE `detalle_venta`
-  MODIFY `iddetalle_venta` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
+  MODIFY `iddetalle_venta` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=28;
+
+--
+-- AUTO_INCREMENT de la tabla `historial_precios`
+--
+ALTER TABLE `historial_precios`
+  MODIFY `id_historial` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT de la tabla `ingreso`
 --
 ALTER TABLE `ingreso`
-  MODIFY `idingreso` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `idingreso` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- AUTO_INCREMENT de la tabla `password_reset`
 --
 ALTER TABLE `password_reset`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT de la tabla `permiso`
@@ -610,7 +720,7 @@ ALTER TABLE `permiso`
 -- AUTO_INCREMENT de la tabla `persona`
 --
 ALTER TABLE `persona`
-  MODIFY `idpersona` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
+  MODIFY `idpersona` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
 -- AUTO_INCREMENT de la tabla `rol_permiso`
@@ -622,31 +732,31 @@ ALTER TABLE `rol_permiso`
 -- AUTO_INCREMENT de la tabla `rol_usuarios`
 --
 ALTER TABLE `rol_usuarios`
-  MODIFY `id_rol` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id_rol` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT de la tabla `user_otp`
 --
 ALTER TABLE `user_otp`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=31;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=48;
 
 --
 -- AUTO_INCREMENT de la tabla `usuario`
 --
 ALTER TABLE `usuario`
-  MODIFY `idusuario` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
+  MODIFY `idusuario` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
 
 --
 -- AUTO_INCREMENT de la tabla `usuario_permiso`
 --
 ALTER TABLE `usuario_permiso`
-  MODIFY `idusuario_permiso` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=178;
+  MODIFY `idusuario_permiso` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=253;
 
 --
 -- AUTO_INCREMENT de la tabla `venta`
 --
 ALTER TABLE `venta`
-  MODIFY `idventa` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `idventa` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- Restricciones para tablas volcadas
@@ -671,6 +781,13 @@ ALTER TABLE `detalle_ingreso`
 ALTER TABLE `detalle_venta`
   ADD CONSTRAINT `fk_detalle_venta_articulo` FOREIGN KEY (`idarticulo`) REFERENCES `articulo` (`idarticulo`) ON DELETE NO ACTION ON UPDATE NO ACTION,
   ADD CONSTRAINT `fk_detalle_venta_venta` FOREIGN KEY (`idventa`) REFERENCES `venta` (`idventa`) ON DELETE NO ACTION ON UPDATE NO ACTION;
+
+--
+-- Filtros para la tabla `historial_precios`
+--
+ALTER TABLE `historial_precios`
+  ADD CONSTRAINT `fk_hp_articulo` FOREIGN KEY (`idarticulo`) REFERENCES `articulo` (`idarticulo`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_hp_usuario` FOREIGN KEY (`idusuario`) REFERENCES `usuario` (`idusuario`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 --
 -- Filtros para la tabla `ingreso`

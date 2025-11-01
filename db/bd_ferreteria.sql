@@ -533,7 +533,14 @@ CREATE TABLE `v_precios_actuales` (
 --
 DROP TABLE IF EXISTS `v_precios_actuales`;
 
-CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `v_precios_actuales`  AS SELECT `a`.`idarticulo` AS `idarticulo`, `a`.`nombre` AS `nombre`, `a`.`precio_venta` AS `precio_venta`, `a`.`precio_compra` AS `precio_compra`, `a`.`stock` AS `stock` FROM `articulo` AS `a` ;
+CREATE ALGORITHM=UNDEFINED SQL SECURITY DEFINER VIEW `v_precios_actuales` AS 
+SELECT 
+  `a`.`idarticulo` AS `idarticulo`, 
+  `a`.`nombre` AS `nombre`, 
+  `a`.`precio_venta` AS `precio_venta`, 
+  `a`.`precio_compra` AS `precio_compra`, 
+  `a`.`stock` AS `stock` 
+FROM `articulo` AS `a`;
 
 --
 -- Índices para tablas volcadas
